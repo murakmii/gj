@@ -3,22 +3,17 @@ package class_file
 import (
 	"encoding/binary"
 	"io"
-	"os"
 )
 
 type reader struct {
 	bytes []byte
 }
 
-func open(classFilePath string) (*reader, error) {
-	f, err := os.Open(classFilePath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
+func open(cfReader io.Reader) (*reader, error) {
+	var err error
 	r := &reader{}
-	r.bytes, err = io.ReadAll(f)
+
+	r.bytes, err = io.ReadAll(cfReader)
 	if err != nil {
 		return nil, err
 	}

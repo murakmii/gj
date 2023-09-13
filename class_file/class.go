@@ -1,5 +1,10 @@
 package class_file
 
+import (
+	"io"
+	"os"
+)
+
 type (
 	Class struct {
 		cp         *ConstantPool
@@ -26,8 +31,22 @@ type (
 
 const magicNumber = 0xCAFEBABE
 
-func ReadClassFile(path string) (*Class, error) {
-	r, err := open(path)
+func ReadClassFile(cfReader io.Reader) (*Class, error) {
+	return readClassFile(cfReader)
+}
+
+func OpenClassFile(path string) (*Class, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return readClassFile(f)
+}
+
+func readClassFile(cfReader io.Reader) (*Class, error) {
+	r, err := open(cfReader)
 	if err != nil {
 		return nil, err
 	}
