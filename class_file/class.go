@@ -108,3 +108,7 @@ func readMethods(r *reader, cp *ConstantPool) []*MethodInfo {
 
 	return methods
 }
+
+func (c *Class) ConstantPool() *ConstantPool {
+	return c.cp
+}

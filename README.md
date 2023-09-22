@@ -16,4 +16,7 @@ echo 'public class HelloGj {
 
 docker run -v $(pwd):/gj -w /gj amazoncorretto:8 javac HelloGj.java
 go run cmd/main.go HelloGj.class
+
+go build -o gj cmd/main.go
+docker run -v $(pwd):/gj -w /gj amazoncorretto:8 ./gj --config dist/config.json --print --main HelloGj
 ```

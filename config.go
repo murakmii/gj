@@ -30,6 +30,11 @@ func ReadConfig(r io.Reader) (*Config, error) {
 		envs[kv[0]] = kv[1]
 	}
 
+	envs["WORKDIR"], err = os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
 	confJson := bytes.NewBuffer(nil)
 	if err := tpl.Execute(confJson, envs); err != nil {
 		return nil, err

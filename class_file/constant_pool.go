@@ -96,6 +96,10 @@ func readCP(r *reader) *ConstantPool {
 	return cp
 }
 
+func (cp *ConstantPool) Size() int {
+	return len(cp.cpInfo)
+}
+
 func (cp *ConstantPool) Utf8(index uint16) *string {
 	s, ok := cp.cpInfo[index].(*string)
 	if !ok {

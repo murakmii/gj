@@ -2,11 +2,14 @@ package gj
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"github.com/murakmii/gj/class_file"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 type (
@@ -35,14 +38,17 @@ func InitClassPaths(paths []string) (classPaths []ClassPath, err error) {
 		}
 	}()
 
+	var matches []string
+	var info os.FileInfo
+
 	for _, path := range paths {
-		matches, err := filepath.Glob(path)
+		matches, err = filepath.Glob(path)
 		if err != nil {
 			return
 		}
 
 		for _, match := range matches {
-			info, err := os.Stat(match)
+			info, err = os.Stat(match)
 			if err != nil {
 				return
 			}
@@ -73,6 +79,9 @@ func InitClassPaths(paths []string) (classPaths []ClassPath, err error) {
 func (j *jar) SearchClass(name string) (*class_file.Class, error) {
 	cfReader, err := j.r.Open(name)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer cfReader.Close()
@@ -85,7 +94,14 @@ func (j *jar) Close() {
 }
 
 func (d *dir) SearchClass(name string) (*class_file.Class, error) {
-	return class_file.OpenClassFile(filepath.Join(d.path, name))
+	class, err := class_file.OpenClassFile(filepath.Join(d.path, name))
+	if err != nil {
+		if errors.Is(err, syscall.ENOENT) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return class, nil
 }
 
 func (d *dir) Close() {
