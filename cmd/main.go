@@ -74,9 +74,8 @@ func execPrint(classPaths []gj.ClassPath) {
 			continue
 		}
 
-		fmt.Printf("Constant pool size: %d\n", classFile.ConstantPool().Size())
-
-		break
+		fmt.Printf(classFile.String())
+		return
 	}
 
 	fmt.Println("class not found")

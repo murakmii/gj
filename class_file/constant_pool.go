@@ -1,7 +1,9 @@
 package class_file
 
 import (
+	"fmt"
 	"math"
+	"strings"
 )
 
 type (
@@ -96,14 +98,40 @@ func readCP(r *reader) *ConstantPool {
 	return cp
 }
 
-func (cp *ConstantPool) Size() int {
-	return len(cp.cpInfo)
-}
-
 func (cp *ConstantPool) Utf8(index uint16) *string {
 	s, ok := cp.cpInfo[index].(*string)
 	if !ok {
 		return nil
 	}
 	return s
+}
+
+func (cp *ConstantPool) String() string {
+	sb := &strings.Builder{}
+	sb.WriteString(fmt.Sprintf("Entries: %d\n", len(cp.cpInfo)-1))
+
+	for i, cpInfo := range cp.cpInfo[1:] {
+		sb.WriteString(fmt.Sprintf("[%4d] ", i+1))
+
+		switch ci := cpInfo.(type) {
+		case *string:
+			sb.WriteString(fmt.Sprintf("UTF-8: '%s'", *ci))
+		case int, uint64, float32, float64:
+			sb.WriteString(fmt.Sprintf("%T: %v", ci, ci))
+		case *NameAndTypeCpInfo:
+			sb.WriteString(fmt.Sprintf("NameAndType: Name=%d, Type=%d", ci.name, ci.desc))
+		case uint16:
+			sb.WriteString(fmt.Sprintf("Class/Str/MethodType: %d", ci))
+		case *ReferenceCpInfo:
+			sb.WriteString(fmt.Sprintf("Field/Method/InterfaceMethodRef: Class=%d, NameAndType=%d", ci.class, ci.nameAndType))
+		case *MethodHandleCpInfo:
+			sb.WriteString(fmt.Sprintf("MethodHandle: Kind=%d, Index=%d", ci.kind, ci.index))
+		case *InvokeDynamicCpInfo:
+			sb.WriteString(fmt.Sprintf("InvokeDynamic: Bootstrap=%d, NameAndType=%d", ci.bootstrapMethodAttr, ci.nameAndType))
+		}
+
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
 }
