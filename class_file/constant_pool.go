@@ -68,9 +68,11 @@ func readCP(r *reader) *ConstantPool {
 
 		case longTag:
 			cp.cpInfo[i] = int64(r.readUint64())
+			i++ // long occupies 2 entries
 
 		case doubleTag:
 			cp.cpInfo[i] = math.Float64frombits(r.readUint64())
+			i++ // double occupies 2 entries
 
 		case classTag, strTag:
 			cp.cpInfo[i] = r.readUint16()
@@ -110,14 +112,18 @@ func (cp *ConstantPool) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString(fmt.Sprintf("Entries: %d\n", len(cp.cpInfo)-1))
 
-	for i, cpInfo := range cp.cpInfo[1:] {
-		sb.WriteString(fmt.Sprintf("[%4d] ", i+1))
+	for i := 1; i < len(cp.cpInfo); i++ {
+		sb.WriteString(fmt.Sprintf("[%4d] ", i))
 
+		cpInfo := cp.cpInfo[i]
 		switch ci := cpInfo.(type) {
 		case *string:
 			sb.WriteString(fmt.Sprintf("UTF-8: '%s'", *ci))
-		case int, uint64, float32, float64:
+		case int, float32:
 			sb.WriteString(fmt.Sprintf("%T: %v", ci, ci))
+		case int64, float64:
+			sb.WriteString(fmt.Sprintf("%T: %v", ci, ci))
+			i++ // long/double occupies 2 entries
 		case *NameAndTypeCpInfo:
 			sb.WriteString(fmt.Sprintf("NameAndType: Name=%d, Type=%d", ci.name, ci.desc))
 		case uint16:
