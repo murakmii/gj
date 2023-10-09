@@ -1,5 +1,7 @@
 package class_file
 
+import "github.com/murakmii/gj/util"
+
 type (
 	CodeAttr struct {
 		maxStack        uint16
@@ -51,21 +53,21 @@ const (
 	syntheticAttr                            = "Synthetic"
 )
 
-func readAttributes(r *reader, cp *ConstantPool) []interface{} {
-	attrs := make([]interface{}, r.readUint16())
+func readAttributes(r *util.BinReader, cp *ConstantPool) []interface{} {
+	attrs := make([]interface{}, r.ReadUint16())
 	for i := 0; i < len(attrs); i++ {
 		attrs[i] = readAttribute(r, cp)
 	}
 	return attrs
 }
 
-func readAttribute(r *reader, cp *ConstantPool) interface{} {
-	name := cp.Utf8(r.readUint16())
+func readAttribute(r *util.BinReader, cp *ConstantPool) interface{} {
+	name := cp.Utf8(r.ReadUint16())
 	if name == nil {
 		return nil
 	}
 
-	size := r.readUint32()
+	size := r.ReadUint32()
 
 	switch *name {
 	//case annotationDefaultAttr:
@@ -74,16 +76,16 @@ func readAttribute(r *reader, cp *ConstantPool) interface{} {
 		return readCodeAttr(r, cp)
 
 	case constantValueAttr:
-		return ConstantValueAttr(r.readUint16())
+		return ConstantValueAttr(r.ReadUint16())
 
 	case deprecatedAttr:
 		return DeprecatedAttr{}
 
 	//case enclosingMethodAttr:
 	case exceptionsAttr:
-		attr := ExceptionsAttr(make([]uint16, r.readUint16()))
+		attr := ExceptionsAttr(make([]uint16, r.ReadUint16()))
 		for i := 0; i < len(attr); i++ {
-			attr[i] = r.readUint16()
+			attr[i] = r.ReadUint16()
 		}
 		return attr
 
@@ -99,42 +101,50 @@ func readAttribute(r *reader, cp *ConstantPool) interface{} {
 	//case runtimeVisibleParameterAnnotationsAttr:
 	//case runtimeVisibleTypeAnnotationsAttr:
 	case signatureAttr:
-		return SignatureAttr(r.readUint16())
+		return SignatureAttr(r.ReadUint16())
 
 	case sourceDebugExtensionAttr:
-		r.skip(int(size)) // ignore
+		r.Skip(int(size)) // ignore
 		return nil
 
 	case sourceFileAttr:
-		return SourceFileAttr(r.readUint16())
+		return SourceFileAttr(r.ReadUint16())
 
 	//case stackMapTableAttr:
 	case syntheticAttr:
 		return SyntheticAttr{}
 
 	default:
-		r.skip(int(size))
+		r.Skip(int(size))
 		return nil
 	}
 }
 
-func readCodeAttr(r *reader, cp *ConstantPool) interface{} {
+func readCodeAttr(r *util.BinReader, cp *ConstantPool) interface{} {
 	attr := &CodeAttr{
-		maxStack:        r.readUint16(),
-		maxLocals:       r.readUint16(),
-		code:            r.readBytes(int(r.readUint32())),
-		exceptionTables: make([]*ExceptionTable, r.readUint16()),
+		maxStack:        r.ReadUint16(),
+		maxLocals:       r.ReadUint16(),
+		code:            r.ReadBytes(int(r.ReadUint32())),
+		exceptionTables: make([]*ExceptionTable, r.ReadUint16()),
 	}
 
 	for i := 0; i < len(attr.exceptionTables); i++ {
 		attr.exceptionTables[i] = &ExceptionTable{
-			startPC:   r.readUint16(),
-			endPC:     r.readUint16(),
-			handlerPC: r.readUint16(),
-			catchType: r.readUint16(),
+			startPC:   r.ReadUint16(),
+			endPC:     r.ReadUint16(),
+			handlerPC: r.ReadUint16(),
+			catchType: r.ReadUint16(),
 		}
 	}
 
 	attr.attributes = readAttributes(r, cp)
 	return attr
+}
+
+func (attr *CodeAttr) MaxLocals() uint16 {
+	return attr.maxLocals
+}
+
+func (attr *CodeAttr) Code() []byte {
+	return attr.code
 }

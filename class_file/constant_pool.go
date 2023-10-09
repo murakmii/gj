@@ -2,6 +2,7 @@ package class_file
 
 import (
 	"fmt"
+	"github.com/murakmii/gj/util"
 	"math"
 	"strings"
 )
@@ -49,55 +50,63 @@ const (
 	invokeDynTag    uint8 = 18
 )
 
-func readCP(r *reader) *ConstantPool {
-	cpCount := r.readUint16()
+func readCP(r *util.BinReader) *ConstantPool {
+	cpCount := r.ReadUint16()
 	cp := &ConstantPool{cpInfo: make([]interface{}, cpCount)}
 
 	// cp.cpInfo[0] won't be used(cp_info entries indexed from 1)
 	for i := uint16(1); i < cpCount; i++ {
-		switch r.readByte() {
+		switch r.ReadByte() {
 		case utf8Tag:
-			s := string(r.readBytes(int(r.readUint16())))
+			s := string(r.ReadBytes(int(r.ReadUint16())))
 			cp.cpInfo[i] = &s
 
 		case intTag:
-			cp.cpInfo[i] = int(r.readUint32())
+			cp.cpInfo[i] = int(r.ReadUint32())
 
 		case floatTag:
-			cp.cpInfo[i] = math.Float32frombits(r.readUint32())
+			cp.cpInfo[i] = math.Float32frombits(r.ReadUint32())
 
 		case longTag:
-			cp.cpInfo[i] = int64(r.readUint64())
+			cp.cpInfo[i] = int64(r.ReadUint64())
 			i++ // long occupies 2 entries
 
 		case doubleTag:
-			cp.cpInfo[i] = math.Float64frombits(r.readUint64())
+			cp.cpInfo[i] = math.Float64frombits(r.ReadUint64())
 			i++ // double occupies 2 entries
 
 		case classTag, strTag:
-			cp.cpInfo[i] = r.readUint16()
+			cp.cpInfo[i] = r.ReadUint16()
 
 		case fieldRefTag, methodRefTag, ifMethodRefTag:
-			cp.cpInfo[i] = &ReferenceCpInfo{class: r.readUint16(), nameAndType: r.readUint16()}
+			cp.cpInfo[i] = &ReferenceCpInfo{class: r.ReadUint16(), nameAndType: r.ReadUint16()}
 
 		case nameAndTypeTag:
-			cp.cpInfo[i] = &NameAndTypeCpInfo{name: r.readUint16(), desc: r.readUint16()}
+			cp.cpInfo[i] = &NameAndTypeCpInfo{name: r.ReadUint16(), desc: r.ReadUint16()}
 
 		case methodHandleTag:
-			cp.cpInfo[i] = &MethodHandleCpInfo{kind: r.readByte(), index: r.readUint16()}
+			cp.cpInfo[i] = &MethodHandleCpInfo{kind: r.ReadByte(), index: r.ReadUint16()}
 
 		case methodTypeTag:
-			cp.cpInfo[i] = r.readUint16()
+			cp.cpInfo[i] = r.ReadUint16()
 
 		case invokeDynTag:
 			cp.cpInfo[i] = &InvokeDynamicCpInfo{
-				bootstrapMethodAttr: r.readUint16(),
-				nameAndType:         r.readUint16(),
+				bootstrapMethodAttr: r.ReadUint16(),
+				nameAndType:         r.ReadUint16(),
 			}
 		}
 	}
 
 	return cp
+}
+
+func (cp *ConstantPool) ClassInfo(index uint16) *string {
+	classInfo, ok := cp.cpInfo[index].(uint16)
+	if !ok {
+		return nil
+	}
+	return cp.Utf8(classInfo)
 }
 
 func (cp *ConstantPool) Utf8(index uint16) *string {

@@ -14,7 +14,7 @@ import (
 
 type (
 	ClassPath interface {
-		SearchClass(name string) (*class_file.Class, error)
+		SearchClass(name string) (*class_file.ClassFile, error)
 		Close()
 	}
 
@@ -76,7 +76,7 @@ func InitClassPaths(paths []string) (classPaths []ClassPath, err error) {
 	return
 }
 
-func (j *jar) SearchClass(name string) (*class_file.Class, error) {
+func (j *jar) SearchClass(name string) (*class_file.ClassFile, error) {
 	cfReader, err := j.r.Open(name)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -93,7 +93,7 @@ func (j *jar) Close() {
 	j.r.Close()
 }
 
-func (d *dir) SearchClass(name string) (*class_file.Class, error) {
+func (d *dir) SearchClass(name string) (*class_file.ClassFile, error) {
 	class, err := class_file.OpenClassFile(filepath.Join(d.path, name))
 	if err != nil {
 		if errors.Is(err, syscall.ENOENT) {

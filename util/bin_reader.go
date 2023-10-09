@@ -1,20 +1,20 @@
-package class_file
+package util
 
 import (
 	"encoding/binary"
 	"io"
 )
 
-type reader struct {
+type BinReader struct {
 	bytes  []byte
 	offset int
 }
 
-func open(cfReader io.Reader) (*reader, error) {
+func NewBinReader(src io.Reader) (*BinReader, error) {
 	var err error
-	r := &reader{}
+	r := &BinReader{}
 
-	r.bytes, err = io.ReadAll(cfReader)
+	r.bytes, err = io.ReadAll(src)
 	if err != nil {
 		return nil, err
 	}
@@ -22,50 +22,50 @@ func open(cfReader io.Reader) (*reader, error) {
 	return r, nil
 }
 
-func (r *reader) skip(n int) {
+func (r *BinReader) Skip(n int) {
 	r.bytes = r.bytes[n:]
 	r.offset += n
 }
 
-func (r *reader) skipToAlign(align int) {
-	r.skip(r.offset % align)
+func (r *BinReader) SkipToAlign(align int) {
+	r.Skip(r.offset % align)
 }
 
-func (r *reader) readByte() uint8 {
+func (r *BinReader) ReadByte() uint8 {
 	b := r.bytes[0]
 	r.bytes = r.bytes[1:]
 	r.offset += 1
 	return b
 }
 
-func (r *reader) readBytes(n int) []byte {
+func (r *BinReader) ReadBytes(n int) []byte {
 	bytes := r.bytes[0:n]
 	r.bytes = r.bytes[n:]
 	r.offset += n
 	return bytes
 }
 
-func (r *reader) readUint16() uint16 {
+func (r *BinReader) ReadUint16() uint16 {
 	i := binary.BigEndian.Uint16(r.bytes)
 	r.bytes = r.bytes[2:]
 	r.offset += 2
 	return i
 }
 
-func (r *reader) readUint32() uint32 {
+func (r *BinReader) ReadUint32() uint32 {
 	i := binary.BigEndian.Uint32(r.bytes)
 	r.bytes = r.bytes[4:]
 	r.offset += 4
 	return i
 }
 
-func (r *reader) readUint64() uint64 {
+func (r *BinReader) ReadUint64() uint64 {
 	i := binary.BigEndian.Uint64(r.bytes)
 	r.bytes = r.bytes[8:]
 	r.offset += 8
 	return i
 }
 
-func (r *reader) remain() int {
+func (r *BinReader) Remain() int {
 	return len(r.bytes)
 }
