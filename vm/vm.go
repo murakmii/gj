@@ -49,3 +49,23 @@ func (vm *VM) FindClass(name string) (*Class, error) {
 
 	return nil, fmt.Errorf("class not found")
 }
+
+func (vm *VM) initializeClasses(mainThread *Thread, classNames []string) error {
+	for _, className := range classNames {
+		class, err := vm.FindClass(className)
+		if err != nil {
+			return err
+		}
+
+		state, err := class.Initialize(mainThread)
+		if err != nil {
+			return err
+		}
+
+		if state == FailedInitialization {
+			return fmt.Errorf("failed to initialize classes in VM initialization")
+		}
+	}
+
+	return nil
+}

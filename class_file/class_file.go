@@ -132,6 +132,10 @@ func (c *ClassFile) SuperClass() string {
 	}
 }
 
+func (c *ClassFile) Fields() []*FieldInfo {
+	return c.fields
+}
+
 func (c *ClassFile) FindMethod(name, desc string) *MethodInfo {
 	for _, method := range c.methods {
 		n := c.ConstantPool().Utf8(method.name)
@@ -153,6 +157,20 @@ func (m *MethodInfo) Code() *CodeAttr {
 	}
 
 	return nil
+}
+
+func (f *FieldInfo) Name() uint16 {
+	return f.name
+}
+
+func (f *FieldInfo) ConstantValue() (ConstantValueAttr, bool) {
+	for _, attr := range f.attributes {
+		if constVal, ok := attr.(ConstantValueAttr); ok {
+			return constVal, true
+		}
+	}
+
+	return 0, false
 }
 
 func (c *ClassFile) String() string {

@@ -18,8 +18,7 @@ type (
 	}
 )
 
-func NewFrame(thread *Thread, curClass *Class, methodName, methodDesc string) *Frame {
-	curMethod := curClass.File().FindMethod(methodName, methodDesc)
+func NewFrame(thread *Thread, curClass *Class, curMethod *class_file.MethodInfo) *Frame {
 	code := curMethod.Code()
 	pc, _ := util.NewBinReader(bytes.NewReader(code.Code()))
 

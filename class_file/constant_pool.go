@@ -117,6 +117,15 @@ func (cp *ConstantPool) Utf8(index uint16) *string {
 	return s
 }
 
+func (cp *ConstantPool) Const(attr ConstantValueAttr) interface{} {
+	switch c := cp.cpInfo[attr].(type) {
+	case uint16:
+		return cp.Utf8(c)
+	default:
+		return c
+	}
+}
+
 func (cp *ConstantPool) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString(fmt.Sprintf("Entries: %d\n", len(cp.cpInfo)-1))
