@@ -34,18 +34,25 @@ func NewFrame(thread *Thread, curClass *Class, curMethod *class_file.MethodInfo)
 
 func (frame *Frame) Execute() (CurrentFrameOperation, error) {
 	for frame.pc.Remain() > 0 {
-		op := frame.pc.ReadByte()
-		instr := InstructionSet[op]
-		if instr == nil {
-			return NoFrameOp, fmt.Errorf("OP code(%#X) is NOT implemented", op)
-		}
-
-		frameOp, err := instr(frame)
+		pc := frame.pc.Pos()
+		frameOp, err := ExecInstr(frame, frame.pc.ReadByte())
 		if err != nil {
 			return NoFrameOp, err
 		}
 
-		if frameOp != NoFrameOp {
+		switch frameOp {
+		case ThrowFromFrame:
+			thrown := frame.PopOperand().(*Instance)
+			frame.ClearOperand()
+			frame.PushOperand(thrown)
+
+			handlerPC := frame.findExceptionHandler(uint16(pc), thrown)
+			if handlerPC == -1 {
+				return ThrowFromFrame, nil
+			}
+			frame.pc.Seek(handlerPC)
+
+		case ReturnFromFrame:
 			return frameOp, nil
 		}
 	}
@@ -70,4 +77,16 @@ func (frame *Frame) PopOperand() interface{} {
 
 func (frame *Frame) ClearOperand() {
 	frame.opStack = nil
+}
+
+func (frame *Frame) findExceptionHandler(curPC uint16, thrown *Instance) int {
+	for _, exceptionTable := range frame.curMethod.Code().ExceptionTable() {
+		if exceptionTable.HandlerStart() <= curPC && curPC < exceptionTable.HandlerEnd() {
+			catchType := frame.curClass.File().ConstantPool().ClassInfo(exceptionTable.CatchType())
+			if thrown.IsSubClassOf(catchType) {
+				return int(exceptionTable.HandlerPC())
+			}
+		}
+	}
+	return -1
 }

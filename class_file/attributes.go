@@ -148,3 +148,23 @@ func (attr *CodeAttr) MaxLocals() uint16 {
 func (attr *CodeAttr) Code() []byte {
 	return attr.code
 }
+
+func (attr *CodeAttr) ExceptionTable() []*ExceptionTable {
+	return attr.exceptionTables
+}
+
+func (e *ExceptionTable) HandlerStart() uint16 {
+	return e.startPC
+}
+
+func (e *ExceptionTable) HandlerEnd() uint16 {
+	return e.endPC
+}
+
+func (e *ExceptionTable) HandlerPC() uint16 {
+	return e.handlerPC
+}
+
+func (e *ExceptionTable) CatchType() uint16 {
+	return e.catchType
+}

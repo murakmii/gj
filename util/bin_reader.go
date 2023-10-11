@@ -31,6 +31,14 @@ func (r *BinReader) SkipToAlign(align int) {
 	r.Skip(r.offset % align)
 }
 
+func (r *BinReader) Seek(pos int) {
+	// TODO: seek
+}
+
+func (r *BinReader) Pos() int {
+	return r.offset
+}
+
 func (r *BinReader) ReadByte() uint8 {
 	b := r.bytes[0]
 	r.bytes = r.bytes[1:]

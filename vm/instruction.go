@@ -1,5 +1,7 @@
 package vm
 
+import "fmt"
+
 type (
 	Instruction           func(frame *Frame) (CurrentFrameOperation, error)
 	CurrentFrameOperation uint8
@@ -14,6 +16,8 @@ const (
 var InstructionSet [255]Instruction
 
 func init() {
+	InstructionSet[0x01] = instrAConstNull
+
 	InstructionSet[0x02] = instrIconst(-1)
 	InstructionSet[0x03] = instrIconst(0)
 	InstructionSet[0x04] = instrIconst(1)
@@ -36,9 +40,30 @@ func init() {
 	InstructionSet[0xB0] = instrReturn
 	InstructionSet[0xB1] = instrReturnVoid
 
+	InstructionSet[0xB3] = instrPutStatic
+
+	InstructionSet[0xB7] = instrInvokeSpecial
+
+	InstructionSet[0xBB] = instrNew
+
+	InstructionSet[0xBD] = instrANewArray
+
 	InstructionSet[0xB8] = func(frame *Frame) (CurrentFrameOperation, error) { // invokestatic
 		return NoFrameOp, nil
 	}
+}
+
+func ExecInstr(frame *Frame, op byte) (CurrentFrameOperation, error) {
+	instr := InstructionSet[op]
+	if instr == nil {
+		return NoFrameOp, fmt.Errorf("OP code(%#X) is NOT implemented", op)
+	}
+	return instr(frame)
+}
+
+func instrAConstNull(frame *Frame) (CurrentFrameOperation, error) {
+	frame.PushOperand(nil)
+	return NoFrameOp, nil
 }
 
 func instrIconst(n int) Instruction {
@@ -77,4 +102,24 @@ func instrReturn(frame *Frame) (CurrentFrameOperation, error) {
 func instrReturnVoid(frame *Frame) (CurrentFrameOperation, error) {
 	frame.ClearOperand()
 	return ReturnFromFrame, nil
+}
+
+func instrPutStatic(frame *Frame) (CurrentFrameOperation, error) {
+	// TODO
+	return NoFrameOp, nil
+}
+
+func instrInvokeSpecial(frame *Frame) (CurrentFrameOperation, error) {
+	// TODO
+	return NoFrameOp, nil
+}
+
+func instrNew(frame *Frame) (CurrentFrameOperation, error) {
+	// TODO
+	return NoFrameOp, nil
+}
+
+func instrANewArray(frame *Frame) (CurrentFrameOperation, error) {
+	// TODO
+	return NoFrameOp, nil
 }

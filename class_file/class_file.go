@@ -132,6 +132,10 @@ func (c *ClassFile) SuperClass() string {
 	}
 }
 
+func (c *ClassFile) ThisClass() string {
+	return *c.cp.ClassInfo(c.this)
+}
+
 func (c *ClassFile) Fields() []*FieldInfo {
 	return c.fields
 }
