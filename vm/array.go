@@ -1,28 +1,25 @@
 package vm
 
 type Array struct {
-	elements []interface{}
+	elem       []interface{}
+	descOfElem string
 }
 
-func NewArray(lenEachDim []int) *Array {
-	array := &Array{elements: make([]interface{}, lenEachDim[0])}
-	if len(lenEachDim) > 1 {
-		for i, _ := range array.elements {
-			array.elements[i] = NewArray(lenEachDim[1:])
-		}
+func NewArray(descOfElem string, length int) *Array {
+	return &Array{
+		elem:       make([]interface{}, length),
+		descOfElem: descOfElem,
 	}
-
-	return array
 }
 
 func (array *Array) Length() int {
-	return len(array.elements)
+	return len(array.elem)
 }
 
 func (array *Array) Set(i int, value interface{}) {
-	array.elements[i] = value
+	array.elem[i] = value
 }
 
 func (array *Array) Get(i int) interface{} {
-	return array.elements[i]
+	return array.elem[i]
 }

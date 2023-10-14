@@ -126,6 +126,13 @@ func (cp *ConstantPool) Const(attr ConstantValueAttr) interface{} {
 	}
 }
 
+func (cp *ConstantPool) Reference(index uint16) (*string, *string, *string) {
+	ref := cp.cpInfo[index].(*ReferenceCpInfo)
+	className := cp.ClassInfo(ref.class)
+	nameAndType := cp.cpInfo[ref.nameAndType].(*NameAndTypeCpInfo)
+	return className, cp.Utf8(nameAndType.name), cp.Utf8(nameAndType.desc)
+}
+
 func (cp *ConstantPool) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString(fmt.Sprintf("Entries: %d\n", len(cp.cpInfo)-1))

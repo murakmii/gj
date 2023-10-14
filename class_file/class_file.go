@@ -27,8 +27,8 @@ type (
 
 	reference struct {
 		accessFlag AccessFlag
-		name       uint16
-		desc       uint16
+		name       *string
+		desc       *string
 		attributes []interface{}
 	}
 )
@@ -93,8 +93,8 @@ func readReference[T FieldInfo | MethodInfo](r *util.BinReader, cp *ConstantPool
 	for i := uint16(0); i < count; i++ {
 		refs[i] = &T{
 			accessFlag: AccessFlag(r.ReadUint16()),
-			name:       r.ReadUint16(),
-			desc:       r.ReadUint16(),
+			name:       cp.Utf8(r.ReadUint16()),
+			desc:       cp.Utf8(r.ReadUint16()),
 			attributes: readAttributes(r, cp),
 		}
 	}
@@ -114,21 +114,11 @@ func (c *ClassFile) Initializer() *MethodInfo {
 	return c.FindMethod("<init>", "()V")
 }
 
-func (c *ClassFile) DependencyClasses() []string {
-	names := make([]string, len(c.interfaces)+1)
-	names[0] = c.SuperClass()
-
-	for i, idx := range c.interfaces {
-		names[i+1] = *c.cp.ClassInfo(idx)
-	}
-	return names
-}
-
-func (c *ClassFile) SuperClass() string {
+func (c *ClassFile) SuperClass() *string {
 	if c.super == 0 {
-		return "java/lang/Object"
+		return nil
 	} else {
-		return *c.cp.ClassInfo(c.super)
+		return c.cp.ClassInfo(c.super)
 	}
 }
 
@@ -136,21 +126,68 @@ func (c *ClassFile) ThisClass() string {
 	return *c.cp.ClassInfo(c.this)
 }
 
-func (c *ClassFile) Fields() []*FieldInfo {
-	return c.fields
+func (c *ClassFile) Interfaces() []*string {
+	names := make([]*string, len(c.interfaces))
+	for i, idx := range c.interfaces {
+		names[i] = c.cp.ClassInfo(idx)
+	}
+	return names
+}
+
+func (c *ClassFile) Fields(flags AccessFlag) []*FieldInfo {
+	fields := make([]*FieldInfo, 0)
+	for _, f := range fields {
+		if f.accessFlag.Contain(flags) {
+			fields = append(fields, f)
+		}
+	}
+
+	return fields
+}
+
+func (c *ClassFile) FindField(name, desc string) *FieldInfo {
+	for _, field := range c.fields {
+		if *field.name == name && *field.desc == desc {
+			return field
+		}
+	}
+	return nil
 }
 
 func (c *ClassFile) FindMethod(name, desc string) *MethodInfo {
 	for _, method := range c.methods {
-		n := c.ConstantPool().Utf8(method.name)
-		d := c.ConstantPool().Utf8(method.desc)
-
-		if *n == name && *d == desc {
+		if *method.name == name && *method.desc == desc {
 			return method
 		}
 	}
-
 	return nil
+}
+
+func ParseDescriptor(descriptor *string) int {
+	n := 0
+	desc := []byte(*descriptor)
+
+	for {
+		desc = desc[1:]
+		switch desc[0] {
+		case 'L':
+			desc = desc[bytes.IndexByte(desc, ';')-1:]
+		case '[':
+			// do nothing
+		case ')':
+			return n
+		default:
+			n++
+		}
+	}
+}
+
+func (m *MethodInfo) IsCallableForInstance() bool {
+	return !m.accessFlag.Contain(StaticFlag) && !m.accessFlag.Contain(AbstractFlag)
+}
+
+func (m *MethodInfo) IsCallableAsStatic() bool {
+	return m.accessFlag.Contain(StaticFlag) && !m.accessFlag.Contain(AbstractFlag)
 }
 
 func (m *MethodInfo) Code() *CodeAttr {
@@ -159,11 +196,14 @@ func (m *MethodInfo) Code() *CodeAttr {
 			return code
 		}
 	}
-
 	return nil
 }
 
-func (f *FieldInfo) Name() uint16 {
+func (m *MethodInfo) NumArgs() int {
+	return ParseDescriptor(m.desc)
+}
+
+func (f *FieldInfo) Name() *string {
 	return f.name
 }
 
@@ -209,7 +249,7 @@ func (c *ClassFile) String() string {
 		sb.WriteString("## Methods\n\n")
 		for _, m := range c.methods {
 			sb.WriteString(fmt.Sprintf("* Native:%v, Name: %s, Desc: %s\n",
-				m.accessFlag.Contain(NativeFlag), *c.cp.Utf8(m.name), *c.cp.Utf8(m.desc)))
+				m.accessFlag.Contain(NativeFlag), *m.name, *m.desc))
 
 			for _, attr := range m.attributes {
 				code, ok := attr.(*CodeAttr)

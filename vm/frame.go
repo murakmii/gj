@@ -32,6 +32,28 @@ func NewFrame(thread *Thread, curClass *Class, curMethod *class_file.MethodInfo)
 	}
 }
 
+func ExecuteFrame(from *Frame, class *Class, method *class_file.MethodInfo, takeObjectRef bool) (interface{}, CurrentFrameOperation, error) {
+	newFrame := NewFrame(from.Thread(), class, method)
+
+	numArgs := method.NumArgs()
+	if takeObjectRef {
+		numArgs++
+	}
+
+	locals := make([]interface{}, numArgs)
+	for i := len(locals) - 1; i >= 0; i-- {
+		locals[i] = from.PopOperand()
+	}
+
+	newFrame.SetLocalVars(locals)
+	frameOp, err := newFrame.Execute()
+	if err != nil {
+		return nil, NoFrameOp, err
+	}
+
+	return newFrame.PopOperand(), frameOp, nil
+}
+
 func (frame *Frame) Execute() (CurrentFrameOperation, error) {
 	for frame.pc.Remain() > 0 {
 		pc := frame.pc.Pos()
@@ -60,6 +82,30 @@ func (frame *Frame) Execute() (CurrentFrameOperation, error) {
 	return NoFrameOp, fmt.Errorf("end of code")
 }
 
+func (frame *Frame) Thread() *Thread {
+	return frame.thread
+}
+
+func (frame *Frame) CurrentClass() *Class {
+	return frame.curClass
+}
+
+func (frame *Frame) PC() *util.BinReader {
+	return frame.pc
+}
+
+func (frame *Frame) SetLocalVars(vars []interface{}) {
+	i := 0
+	for _, v := range vars {
+		frame.locals[i] = v
+
+		switch _ := v.(type) {
+		case int64, float64:
+			i++
+		}
+	}
+}
+
 func (frame *Frame) PushOperand(value interface{}) {
 	frame.opStack = append(frame.opStack, value)
 }
@@ -75,6 +121,14 @@ func (frame *Frame) PopOperand() interface{} {
 	return pop
 }
 
+func (frame *Frame) PeekFromTop(index int) interface{} {
+	i := len(frame.opStack) - 1 - index
+	if i < 0 {
+		return nil
+	}
+	return frame.opStack[i]
+}
+
 func (frame *Frame) ClearOperand() {
 	frame.opStack = nil
 }
@@ -83,7 +137,7 @@ func (frame *Frame) findExceptionHandler(curPC uint16, thrown *Instance) int {
 	for _, exceptionTable := range frame.curMethod.Code().ExceptionTable() {
 		if exceptionTable.HandlerStart() <= curPC && curPC < exceptionTable.HandlerEnd() {
 			catchType := frame.curClass.File().ConstantPool().ClassInfo(exceptionTable.CatchType())
-			if thrown.IsSubClassOf(catchType) {
+			if thrown.Class().IsSubClassOf(catchType) {
 				return int(exceptionTable.HandlerPC())
 			}
 		}

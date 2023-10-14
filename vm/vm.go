@@ -27,45 +27,35 @@ func InitVM(config *gj.Config) (*VM, error) {
 	return vm, nil
 }
 
-func (vm *VM) FindClass(name string) (*Class, error) {
+func (vm *VM) FindClass(name *string) (*Class, error) {
 	vm.classLock.Lock()
 	defer vm.classLock.Unlock()
 
-	if class, ok := vm.classCache[name]; ok {
+	if class, ok := vm.classCache[*name]; ok {
 		return class, nil
 	}
 
 	for _, classPath := range vm.classPaths {
-		file, err := classPath.SearchClass(name)
+		file, err := classPath.SearchClass(*name)
 		if err != nil {
 			return nil, err
 		}
 
 		if file != nil {
-			vm.classCache[name] = NewClass(file)
-			return vm.classCache[name], nil
+			vm.classCache[*name] = NewClass(file)
+			return vm.classCache[*name], nil
 		}
 	}
 
-	return nil, fmt.Errorf("class not found")
+	return nil, fmt.Errorf("class '%s' not found", *name)
 }
 
-func (vm *VM) initializeClasses(mainThread *Thread, classNames []string) error {
-	for _, className := range classNames {
-		class, err := vm.FindClass(className)
-		if err != nil {
-			return err
-		}
-
-		state, err := class.Initialize(mainThread)
-		if err != nil {
-			return err
-		}
-
-		if state == FailedInitialization {
-			return fmt.Errorf("failed to initialize classes in VM initialization")
-		}
+func (vm *VM) FindInitializedClass(name *string, curThread *Thread) (*Class, ClassState, error) {
+	class, err := vm.FindClass(name)
+	if err != nil {
+		return nil, NotInitialized, err
 	}
 
-	return nil
+	state, err := class.Initialize(curThread)
+	return class, state, err
 }
