@@ -190,6 +190,18 @@ func (m *MethodInfo) IsCallableAsStatic() bool {
 	return m.accessFlag.Contain(StaticFlag) && !m.accessFlag.Contain(AbstractFlag)
 }
 
+func (m *MethodInfo) Name() *string {
+	return m.name
+}
+
+func (m *MethodInfo) Descriptor() *string {
+	return m.desc
+}
+
+func (m *MethodInfo) IsNative() bool {
+	return m.accessFlag.Contain(NativeFlag)
+}
+
 func (m *MethodInfo) Code() *CodeAttr {
 	for _, attr := range m.attributes {
 		if code, ok := attr.(*CodeAttr); ok {
@@ -200,7 +212,11 @@ func (m *MethodInfo) Code() *CodeAttr {
 }
 
 func (m *MethodInfo) NumArgs() int {
-	return ParseDescriptor(m.desc)
+	n := ParseDescriptor(m.desc)
+	if !m.accessFlag.Contain(StaticFlag) {
+		n++
+	}
+	return n
 }
 
 func (f *FieldInfo) Name() *string {

@@ -9,101 +9,78 @@ import (
 
 type (
 	Frame struct {
-		thread    *Thread
 		locals    []interface{}
 		curClass  *Class
 		curMethod *class_file.MethodInfo
 		opStack   []interface{}
-		pc        *util.BinReader
+		code      *util.BinReader
+		pc        uint16
+	}
+
+	FrameResult struct {
+		OperandStack   []interface{}
+		ThrowException bool
 	}
 )
 
-func NewFrame(thread *Thread, curClass *Class, curMethod *class_file.MethodInfo) *Frame {
+func NewFrame(curClass *Class, curMethod *class_file.MethodInfo) *Frame {
+	fmt.Printf("enter new frame: %s.%s:%s\n", curClass.File().ThisClass(), *curMethod.Name(), *curMethod.Descriptor())
+
 	code := curMethod.Code()
-	pc, _ := util.NewBinReader(bytes.NewReader(code.Code()))
+	codeReader, _ := util.NewBinReader(bytes.NewReader(code.Code()))
 
 	return &Frame{
-		thread:    thread,
 		locals:    make([]interface{}, code.MaxLocals()),
 		curClass:  curClass,
 		curMethod: curMethod,
 		opStack:   nil,
-		pc:        pc,
+		code:      codeReader,
+		pc:        0,
 	}
 }
 
-func ExecuteFrame(from *Frame, class *Class, method *class_file.MethodInfo, takeObjectRef bool) (interface{}, CurrentFrameOperation, error) {
-	newFrame := NewFrame(from.Thread(), class, method)
+func (frame *Frame) SetLocals(vars []interface{}) *Frame {
+	i := 0
+	for _, v := range vars {
+		frame.locals[i] = v
 
-	numArgs := method.NumArgs()
-	if takeObjectRef {
-		numArgs++
-	}
-
-	locals := make([]interface{}, numArgs)
-	for i := len(locals) - 1; i >= 0; i-- {
-		locals[i] = from.PopOperand()
-	}
-
-	newFrame.SetLocalVars(locals)
-	frameOp, err := newFrame.Execute()
-	if err != nil {
-		return nil, NoFrameOp, err
-	}
-
-	return newFrame.PopOperand(), frameOp, nil
-}
-
-func (frame *Frame) Execute() (CurrentFrameOperation, error) {
-	for frame.pc.Remain() > 0 {
-		pc := frame.pc.Pos()
-		frameOp, err := ExecInstr(frame, frame.pc.ReadByte())
-		if err != nil {
-			return NoFrameOp, err
-		}
-
-		switch frameOp {
-		case ThrowFromFrame:
-			thrown := frame.PopOperand().(*Instance)
-			frame.ClearOperand()
-			frame.PushOperand(thrown)
-
-			handlerPC := frame.findExceptionHandler(uint16(pc), thrown)
-			if handlerPC == -1 {
-				return ThrowFromFrame, nil
-			}
-			frame.pc.Seek(handlerPC)
-
-		case ReturnFromFrame:
-			return frameOp, nil
+		switch v.(type) {
+		case int64, float64:
+			i++
 		}
 	}
 
-	return NoFrameOp, fmt.Errorf("end of code")
-}
-
-func (frame *Frame) Thread() *Thread {
-	return frame.thread
+	return frame
 }
 
 func (frame *Frame) CurrentClass() *Class {
 	return frame.curClass
 }
 
-func (frame *Frame) PC() *util.BinReader {
+func (frame *Frame) CurrentMethod() *class_file.MethodInfo {
+	return frame.curMethod
+}
+
+func (frame *Frame) NextInstr() byte {
+	frame.pc = uint16(frame.code.Pos())
+	return frame.code.ReadByte()
+}
+
+func (frame *Frame) NextParamByte() byte {
+	return frame.code.ReadByte()
+}
+
+func (frame *Frame) NextParamUint16() uint16 {
+	return frame.code.ReadUint16()
+}
+
+func (frame *Frame) PC() uint16 {
 	return frame.pc
 }
 
-func (frame *Frame) SetLocalVars(vars []interface{}) {
-	i := 0
-	for _, v := range vars {
-		frame.locals[i] = v
-
-		switch _ := v.(type) {
-		case int64, float64:
-			i++
-		}
-	}
+func (frame *Frame) JumpPC(pc uint16) {
+	frame.pc = pc
+	frame.code.Seek(int(pc))
 }
 
 func (frame *Frame) PushOperand(value interface{}) {
@@ -121,6 +98,14 @@ func (frame *Frame) PopOperand() interface{} {
 	return pop
 }
 
+func (frame *Frame) PopOperands(n int) []interface{} {
+	popped := make([]interface{}, n)
+	for i := n - 1; i >= 0; i-- {
+		popped[i] = frame.PopOperand()
+	}
+	return popped
+}
+
 func (frame *Frame) PeekFromTop(index int) interface{} {
 	i := len(frame.opStack) - 1 - index
 	if i < 0 {
@@ -133,14 +118,20 @@ func (frame *Frame) ClearOperand() {
 	frame.opStack = nil
 }
 
-func (frame *Frame) findExceptionHandler(curPC uint16, thrown *Instance) int {
-	for _, exceptionTable := range frame.curMethod.Code().ExceptionTable() {
-		if exceptionTable.HandlerStart() <= curPC && curPC < exceptionTable.HandlerEnd() {
-			catchType := frame.curClass.File().ConstantPool().ClassInfo(exceptionTable.CatchType())
+func (frame *Frame) Locals() []interface{} {
+	return frame.locals
+}
+
+func (frame *Frame) FindCurrentExceptionHandler(thrown *Instance) *uint16 {
+	for _, exTable := range frame.curMethod.Code().ExceptionTable() {
+		if exTable.HandlerStart() <= frame.pc && frame.pc < exTable.HandlerEnd() {
+			catchType := frame.curClass.File().ConstantPool().ClassInfo(exTable.CatchType())
+
 			if thrown.Class().IsSubClassOf(catchType) {
-				return int(exceptionTable.HandlerPC())
+				handler := exTable.HandlerPC()
+				return &handler
 			}
 		}
 	}
-	return -1
+	return nil
 }

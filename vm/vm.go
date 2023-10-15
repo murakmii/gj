@@ -36,7 +36,7 @@ func (vm *VM) FindClass(name *string) (*Class, error) {
 	}
 
 	for _, classPath := range vm.classPaths {
-		file, err := classPath.SearchClass(*name)
+		file, err := classPath.SearchClass(*name + ".class")
 		if err != nil {
 			return nil, err
 		}

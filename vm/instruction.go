@@ -6,19 +6,13 @@ import (
 )
 
 type (
-	Instruction           func(frame *Frame) (CurrentFrameOperation, error)
-	CurrentFrameOperation uint8
-)
-
-const (
-	NoFrameOp CurrentFrameOperation = iota
-	ReturnFromFrame
-	ThrowFromFrame
+	Instruction func(*Thread, *Frame) error
 )
 
 var InstructionSet [255]Instruction
 
 func init() {
+	InstructionSet[0x00] = func(_ *Thread, _ *Frame) error { return nil } // nop
 	InstructionSet[0x01] = instrAConstNull
 
 	InstructionSet[0x02] = instrIconst(-1)
@@ -28,6 +22,25 @@ func init() {
 	InstructionSet[0x06] = instrIconst(3)
 	InstructionSet[0x07] = instrIconst(4)
 	InstructionSet[0x08] = instrIconst(5)
+
+	InstructionSet[0x15] = instrLoad
+	InstructionSet[0x17] = instrLoad
+	InstructionSet[0x19] = instrLoad
+
+	InstructionSet[0x1A] = instrLoadN(0)
+	InstructionSet[0x1B] = instrLoadN(1)
+	InstructionSet[0x1C] = instrLoadN(2)
+	InstructionSet[0x1D] = instrLoadN(3)
+
+	InstructionSet[0x22] = instrLoadN(0)
+	InstructionSet[0x23] = instrLoadN(1)
+	InstructionSet[0x24] = instrLoadN(2)
+	InstructionSet[0x25] = instrLoadN(3)
+
+	InstructionSet[0x2A] = instrLoadN(0)
+	InstructionSet[0x2B] = instrLoadN(1)
+	InstructionSet[0x2C] = instrLoadN(2)
+	InstructionSet[0x2D] = instrLoadN(3)
 
 	InstructionSet[0x59] = instrDup(1, 0)
 	InstructionSet[0x5A] = instrDup(1, 1)
@@ -52,34 +65,42 @@ func init() {
 	InstructionSet[0xBB] = instrNew
 
 	InstructionSet[0xBD] = instrANewArray
-
-	InstructionSet[0xB8] = func(frame *Frame) (CurrentFrameOperation, error) { // invokestatic
-		return NoFrameOp, nil
-	}
 }
 
-func ExecInstr(frame *Frame, op byte) (CurrentFrameOperation, error) {
-	instr := InstructionSet[op]
-	if instr == nil {
-		return NoFrameOp, fmt.Errorf("OP code(%#X) is NOT implemented", op)
+func ExecInstr(thread *Thread, frame *Frame, op byte) error {
+	fmt.Printf("exec instr %#x\n", op)
+	if InstructionSet[op] == nil {
+		return fmt.Errorf("op(code = %#x) has been NOT implemented", op)
 	}
-	return instr(frame)
+	return InstructionSet[op](thread, frame)
 }
 
-func instrAConstNull(frame *Frame) (CurrentFrameOperation, error) {
+func instrAConstNull(thread *Thread, frame *Frame) error {
 	frame.PushOperand(nil)
-	return NoFrameOp, nil
+	return nil
 }
 
 func instrIconst(n int) Instruction {
-	return func(frame *Frame) (CurrentFrameOperation, error) {
+	return func(_ *Thread, frame *Frame) error {
 		frame.PushOperand(n)
-		return NoFrameOp, nil
+		return nil
+	}
+}
+
+func instrLoad(_ *Thread, frame *Frame) error {
+	frame.PushOperand(frame.Locals()[frame.NextParamByte()])
+	return nil
+}
+
+func instrLoadN(n int) Instruction {
+	return func(_ *Thread, frame *Frame) error {
+		frame.PushOperand(frame.Locals()[n])
+		return nil
 	}
 }
 
 func instrDup(n, x int) Instruction {
-	return func(frame *Frame) (CurrentFrameOperation, error) {
+	return func(_ *Thread, frame *Frame) error {
 		top := make([]interface{}, n+x)
 		for i := len(top) - 1; i >= 0; i-- {
 			top[i] = frame.PopOperand()
@@ -93,124 +114,108 @@ func instrDup(n, x int) Instruction {
 			frame.PushOperand(v)
 		}
 
-		return NoFrameOp, nil
+		return nil
 	}
 }
 
-func instrReturn(frame *Frame) (CurrentFrameOperation, error) {
-	ret := frame.PopOperand()
-	frame.ClearOperand()
-	frame.PushOperand(ret)
-	return ReturnFromFrame, nil
+func instrReturn(thread *Thread, frame *Frame) error {
+	thread.PopFrame()
+	if thread.CurrentFrame() != nil {
+		thread.CurrentFrame().PushOperand(frame.PopOperand())
+	}
+	return nil
 }
 
-func instrReturnVoid(frame *Frame) (CurrentFrameOperation, error) {
-	frame.ClearOperand()
-	return ReturnFromFrame, nil
+func instrReturnVoid(thread *Thread, _ *Frame) error {
+	thread.PopFrame()
+	return nil
 }
 
-func instrPutStatic(frame *Frame) (CurrentFrameOperation, error) {
-	className, name, desc := frame.CurrentClass().File().ConstantPool().Reference(frame.PC().ReadUint16())
-	class, state, err := frame.Thread().VM().FindInitializedClass(className, frame.Thread())
+func instrPutStatic(thread *Thread, frame *Frame) error {
+	className, name, desc := frame.CurrentClass().File().ConstantPool().Reference(frame.NextParamUint16())
+	class, state, err := thread.VM().FindInitializedClass(className, thread)
 	if err != nil {
-		return NoFrameOp, err
+		return err
 	}
 	if state == FailedInitialization {
-		return NoFrameOp, fmt.Errorf("failed initialization of waiting class: %s", *className)
+		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
 
 	resolvedClass, resolvedField := class.ResolveField(*name, *desc)
 	resolvedClass.SetStaticField(resolvedField.Name(), frame.PopOperand())
 
-	return NoFrameOp, nil
+	return nil
 }
 
-func instrInvokeVirtual(frame *Frame) (CurrentFrameOperation, error) {
-	_, name, desc := frame.curClass.File().ConstantPool().Reference(frame.PC().ReadUint16())
+func instrInvokeVirtual(thread *Thread, frame *Frame) error {
+	_, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
 	instance := frame.PeekFromTop(class_file.ParseDescriptor(desc)).(*Instance)
 	if instance == nil {
-		return NoFrameOp, fmt.Errorf("receiver instance is null")
+		return fmt.Errorf("receiver instance is null")
 	}
 
 	resolvedClass, resolvedMethod := instance.Class().ResolveMethod(*name, *desc)
 	if resolvedClass == nil || !resolvedMethod.IsCallableForInstance() {
-		return NoFrameOp, fmt.Errorf("method not found: %s.%s", *name, *desc)
+		return fmt.Errorf("method not found: %s.%s", *name, *desc)
 	}
 
-	ret, frameOp, err := ExecuteFrame(frame, resolvedClass, resolvedMethod, true)
-	if err != nil {
-		return NoFrameOp, err
-	}
-
-	frame.PushOperand(ret)
-	return frameOp, nil
+	return thread.ExecMethod(resolvedClass, resolvedMethod)
 }
 
-func instrInvokeSpecial(frame *Frame) (CurrentFrameOperation, error) {
-	className, name, desc := frame.curClass.File().ConstantPool().Reference(frame.PC().ReadUint16())
-	class, state, err := frame.Thread().VM().FindInitializedClass(className, frame.Thread())
+func instrInvokeSpecial(thread *Thread, frame *Frame) error {
+	className, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
+	class, state, err := thread.VM().FindInitializedClass(className, thread)
 	if err != nil {
-		return NoFrameOp, err
+		return err
 	}
 	if state == FailedInitialization {
-		return NoFrameOp, fmt.Errorf("failed initialization of waiting class: %s", *className)
+		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
 
 	resolvedClass, resolvedMethod := class.ResolveMethod(*name, *desc)
 	if resolvedClass == nil || !resolvedMethod.IsCallableForInstance() {
-		return NoFrameOp, fmt.Errorf("method not found: %s.%s", *name, *desc)
+		return fmt.Errorf("method not found: %s.%s", *name, *desc)
 	}
 
-	ret, frameOp, err := ExecuteFrame(frame, resolvedClass, resolvedMethod, true)
-	if err != nil {
-		return NoFrameOp, err
-	}
-
-	frame.PushOperand(ret)
-	return frameOp, nil
+	return thread.ExecMethod(resolvedClass, resolvedMethod)
 }
 
-func instrInvokeStatic(frame *Frame) (CurrentFrameOperation, error) {
-	className, name, desc := frame.curClass.File().ConstantPool().Reference(frame.PC().ReadUint16())
-	class, state, err := frame.Thread().VM().FindInitializedClass(className, frame.Thread())
+func instrInvokeStatic(thread *Thread, frame *Frame) error {
+	className, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
+	class, state, err := thread.VM().FindInitializedClass(className, thread)
 	if err != nil {
-		return NoFrameOp, err
+		return err
 	}
 	if state == FailedInitialization {
-		return NoFrameOp, fmt.Errorf("failed initialization of waiting class: %s", *className)
+		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
 
 	resolvedClass, resolvedMethod := class.ResolveMethod(*name, *desc)
 	if resolvedClass == nil || !resolvedMethod.IsCallableAsStatic() {
-		return NoFrameOp, fmt.Errorf("method not found: %s.%s", *name, *desc)
+		return fmt.Errorf("method not found: %s.%s", *name, *desc)
 	}
 
-	ret, frameOp, err := ExecuteFrame(frame, resolvedClass, resolvedMethod, false)
-	if err != nil {
-		return NoFrameOp, err
-	}
+	fmt.Printf("invoke static %s.%s:%s\n", resolvedClass.File().ThisClass(), *resolvedMethod.Name(), *resolvedMethod.Descriptor())
 
-	frame.PushOperand(ret)
-	return frameOp, nil
+	return thread.ExecMethod(resolvedClass, resolvedMethod)
 }
 
-func instrNew(frame *Frame) (CurrentFrameOperation, error) {
-	className := frame.curClass.File().ConstantPool().ClassInfo(frame.PC().ReadUint16())
-	class, state, err := frame.Thread().VM().FindInitializedClass(className, frame.Thread())
+func instrNew(thread *Thread, frame *Frame) error {
+	className := frame.curClass.File().ConstantPool().ClassInfo(frame.NextParamUint16())
+	class, state, err := thread.VM().FindInitializedClass(className, thread)
 	if err != nil {
-		return NoFrameOp, err
+		return err
 	}
 	if state == FailedInitialization {
-		return NoFrameOp, fmt.Errorf("failed initialization of waiting class: %s", *className)
+		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
 
 	frame.PushOperand(NewInstance(class))
-	return NoFrameOp, nil
+	return nil
 }
 
-func instrANewArray(frame *Frame) (CurrentFrameOperation, error) {
-	className := frame.curClass.File().ConstantPool().ClassInfo(frame.PC().ReadUint16())
+func instrANewArray(_ *Thread, frame *Frame) error {
+	className := frame.curClass.File().ConstantPool().ClassInfo(frame.NextParamUint16())
 	frame.PushOperand(NewArray(*className, frame.PopOperand().(int)))
-
-	return NoFrameOp, nil
+	return nil
 }

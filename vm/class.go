@@ -123,7 +123,7 @@ func (class *Class) Initialize(curThread *Thread) (ClassState, error) {
 		return class.state, nil
 
 	case Initializing:
-		if class.initBy == curThread {
+		if curThread.Equal(class.initBy) {
 			class.initCond.L.Unlock()
 			return class.state, nil
 		}
@@ -183,13 +183,12 @@ func (class *Class) initialize(curThread *Thread) error {
 	// Call clinit
 	clinit := class.file.FindMethod("<clinit>", "()V")
 	if clinit != nil {
-		frame := NewFrame(curThread, class, clinit)
-		frameOp, err := frame.Execute()
+		unCatchEx, err := curThread.Derive().Execute(NewFrame(class, clinit))
 		if err != nil {
 			return err
 		}
 
-		if frameOp == ThrowFromFrame {
+		if unCatchEx != nil {
 			state = FailedInitialization
 			return nil
 		}

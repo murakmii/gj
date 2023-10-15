@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/murakmii/gj"
+	"github.com/murakmii/gj/vm"
+	_ "github.com/murakmii/gj/vm/native"
 	"os"
 	"strings"
 )
@@ -48,7 +50,7 @@ func main() {
 	if print {
 		execPrint(classPaths)
 	} else {
-		// TODO: execute jvm
+		execVM(config)
 	}
 }
 
@@ -79,4 +81,23 @@ func execPrint(classPaths []gj.ClassPath) {
 	}
 
 	fmt.Println("class not found")
+}
+
+func execVM(config *gj.Config) {
+	vmInstance, err := vm.InitVM(config)
+	if err != nil {
+		panic(err)
+	}
+
+	className := "java/lang/String"
+	javaLangString, state, err := vmInstance.FindInitializedClass(&className, vm.NewThread(vmInstance))
+	if err != nil {
+		panic(err)
+	}
+	if state == vm.FailedInitialization {
+		panic("string class initialization failed")
+	}
+
+	vm.NewInstance(javaLangString)
+	fmt.Println("succeeded string class initialization")
 }
