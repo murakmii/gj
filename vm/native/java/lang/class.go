@@ -12,9 +12,13 @@ func ClassRegisterNatives(thread *vm.Thread, args []interface{}) error {
 
 func ClassDesiredAssertionStatus0(thread *vm.Thread, args []interface{}) error {
 	// return false
-	thread.PopFrame()
-	if thread.CurrentFrame() != nil {
-		thread.CurrentFrame().PushOperand(0)
-	}
+	thread.CurrentFrame().PushOperand(0)
+	return nil
+}
+
+func ClassGetPrimitiveClass(thread *vm.Thread, _ []interface{}) error {
+	// TODO: generate class instance
+	// return null
+	thread.CurrentFrame().PushOperand(nil)
 	return nil
 }

@@ -110,20 +110,29 @@ func execVM(config *gj.Config) {
 
 	fmt.Println("succeeded string class initialization")
 
-	u16 := utf16.Encode([]rune("sample text"))
-	charArray := vm.NewArray("C", len(u16))
-	for i, e := range u16 {
-		charArray.Set(i, int(e))
-	}
+	thread := vm.NewThread(vmInstance)
 
-	instance := vm.NewInstance(javaLangString)
-	class, method := javaLangString.ResolveMethod("<init>", "([C)V")
-	frame := vm.NewFrame(class, method).SetLocals([]interface{}{instance, charArray})
+	strA := "Hello, ワ"
+	strB := "ールド!"
 
-	_, err = vm.NewThread(vmInstance).Execute(frame)
-	if err != nil {
+	jsA, _ := vmInstance.JavaString(thread, &strA)
+	jsB, _ := vmInstance.JavaString(thread, &strB)
+
+	class, method := javaLangString.ResolveMethod("concat", "(Ljava/lang/String;)Ljava/lang/String;")
+	frame := vm.NewFrame(class, method).SetLocals([]interface{}{jsA, jsB})
+
+	if _, err = thread.Execute(frame); err != nil {
 		panic(err)
 	}
 
-	fmt.Println("constructor failed")
+	fClass := "java/lang/String"
+	fName := "value"
+	charArray := thread.GetResult().(*vm.Instance).GetField(&fClass, &fName).(*vm.Array)
+
+	u16 := make([]uint16, charArray.Length())
+	for i := 0; i < charArray.Length(); i++ {
+		u16[i] = uint16(charArray.Get(i).(int))
+	}
+
+	fmt.Printf("**** concat = %s ****\n", string(utf16.Decode(u16)))
 }

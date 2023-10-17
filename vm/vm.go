@@ -4,19 +4,23 @@ import (
 	"fmt"
 	"github.com/murakmii/gj"
 	"sync"
+	"unicode/utf16"
 )
 
 type VM struct {
 	classPaths []gj.ClassPath
 	classCache map[string]*Class
 	classLock  *sync.Mutex
+
+	javaStringCache map[string]*Instance
 }
 
 func InitVM(config *gj.Config) (*VM, error) {
 	var err error
 	vm := &VM{
-		classCache: make(map[string]*Class),
-		classLock:  &sync.Mutex{},
+		classCache:      make(map[string]*Class),
+		classLock:       &sync.Mutex{},
+		javaStringCache: make(map[string]*Instance),
 	}
 
 	vm.classPaths, err = gj.InitClassPaths(config.ClassPath)
@@ -58,4 +62,33 @@ func (vm *VM) FindInitializedClass(name *string, curThread *Thread) (*Class, Cla
 
 	state, err := class.Initialize(curThread)
 	return class, state, err
+}
+
+func (vm *VM) JavaString(thread *Thread, s *string) (*Instance, error) {
+	if cache, ok := vm.javaStringCache[*s]; ok {
+		return cache, nil
+	}
+
+	className := "java/lang/String"
+	class, state, err := vm.FindInitializedClass(&className, thread)
+	if err != nil {
+		return nil, err
+	}
+	if state == FailedInitialization {
+		return nil, fmt.Errorf("failed initialization for %s", className)
+	}
+
+	js := NewInstance(class)
+
+	u16 := utf16.Encode([]rune(*s))
+	charArray := NewArray("C", len(u16))
+	for i, e := range u16 {
+		charArray.Set(i, int(e))
+	}
+
+	fieldName := "value"
+	js.PutField(&className, &fieldName, charArray)
+
+	vm.javaStringCache[*s] = js
+	return js, nil
 }

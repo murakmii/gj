@@ -27,7 +27,12 @@ func init() {
 	InstructionSet[0x07] = instrIconst(4)
 	InstructionSet[0x08] = instrIconst(5)
 
-	InstructionSet[0x12] = instrLdc
+	InstructionSet[0x10] = InstrBiPush
+	InstructionSet[0x11] = InstrSiPush
+
+	InstructionSet[0x12] = instrLdc(func(f *Frame) uint16 { return uint16(f.NextParamByte()) })
+	InstructionSet[0x13] = instrLdc(func(f *Frame) uint16 { return f.NextParamUint16() })
+	InstructionSet[0x14] = InstructionSet[0x13]
 
 	InstructionSet[0x15] = instrLoad
 	InstructionSet[0x17] = instrLoad
@@ -48,6 +53,11 @@ func init() {
 	InstructionSet[0x2C] = instrLoadN(2)
 	InstructionSet[0x2D] = instrLoadN(3)
 
+	InstructionSet[0x36] = instrStore
+	InstructionSet[0x37] = instrStore
+	InstructionSet[0x38] = instrStore
+	InstructionSet[0x39] = instrStore
+	InstructionSet[0x3A] = instrStore
 	InstructionSet[0x3B] = instrStoreN(0)
 	InstructionSet[0x3C] = instrStoreN(1)
 	InstructionSet[0x3D] = instrStoreN(2)
@@ -65,12 +75,32 @@ func init() {
 	InstructionSet[0x5D] = instrDup(2, 1)
 	InstructionSet[0x5E] = instrDup(2, 2)
 
-	InstructionSet[0x99] = instrIfCond(func(i int) bool { return i == 0 })
-	InstructionSet[0x9A] = instrIfCond(func(i int) bool { return i != 0 })
-	InstructionSet[0x9B] = instrIfCond(func(i int) bool { return i < 0 })
-	InstructionSet[0x9C] = instrIfCond(func(i int) bool { return i <= 0 })
-	InstructionSet[0x9D] = instrIfCond(func(i int) bool { return i > 0 })
-	InstructionSet[0x9E] = instrIfCond(func(i int) bool { return i >= 0 })
+	InstructionSet[0x60] = instrAdd[int]()
+	InstructionSet[0x61] = instrAdd[int64]()
+
+	InstructionSet[0x78] = instrShiftLeft[int](0x1F)
+	InstructionSet[0x79] = instrShiftLeft[int64](0x3F)
+	InstructionSet[0x7A] = instrShiftRight[int](0x1F)
+	InstructionSet[0x7B] = instrShiftRight[int64](0x3F)
+
+	InstructionSet[0x7E] = instrAnd[int]
+	InstructionSet[0x7F] = instrAnd[int64]
+
+	InstructionSet[0x85] = InstrI2L
+
+	InstructionSet[0x99] = instrIf(func(i int) bool { return i == 0 })
+	InstructionSet[0x9A] = instrIf(func(i int) bool { return i != 0 })
+	InstructionSet[0x9B] = instrIf(func(i int) bool { return i < 0 })
+	InstructionSet[0x9C] = instrIf(func(i int) bool { return i <= 0 })
+	InstructionSet[0x9D] = instrIf(func(i int) bool { return i > 0 })
+	InstructionSet[0x9E] = instrIf(func(i int) bool { return i >= 0 })
+
+	InstructionSet[0x9F] = instrIfICmp(func(v1 int, v2 int) bool { return v1 == v2 })
+	InstructionSet[0xA0] = instrIfICmp(func(v1 int, v2 int) bool { return v1 != v2 })
+	InstructionSet[0xA1] = instrIfICmp(func(v1 int, v2 int) bool { return v1 < v2 })
+	InstructionSet[0xA2] = instrIfICmp(func(v1 int, v2 int) bool { return v1 <= v2 })
+	InstructionSet[0xA3] = instrIfICmp(func(v1 int, v2 int) bool { return v1 > v2 })
+	InstructionSet[0xA4] = instrIfICmp(func(v1 int, v2 int) bool { return v1 >= v2 })
 
 	InstructionSet[0xA7] = instrGoTo
 
@@ -81,6 +111,7 @@ func init() {
 	InstructionSet[0xB0] = instrReturn
 	InstructionSet[0xB1] = instrReturnVoid
 
+	InstructionSet[0xB2] = instrGetStatic
 	InstructionSet[0xB3] = instrPutStatic
 	InstructionSet[0xB4] = instrGetField
 	InstructionSet[0xB5] = instrPutField
@@ -118,24 +149,46 @@ func instrIconst(n int) Instruction {
 	}
 }
 
-func instrLdc(thread *Thread, frame *Frame) error {
-	switch entry := frame.CurrentClass().File().ConstantPool().Entry(uint16(frame.NextParamByte())).(type) {
-	case class_file.ClassCpInfo:
-		className := "java/lang/Class"
-		class, state, err := thread.VM().FindInitializedClass(&className, thread)
-		if err != nil {
-			return err
-		}
-		if state == FailedInitialization {
-			return fmt.Errorf("failed initialization of class class in LDC")
-		}
-		frame.PushOperand(NewInstance(class))
-
-	default:
-		return fmt.Errorf("LDC unsupport %+v", entry)
-	}
-
+func InstrBiPush(_ *Thread, frame *Frame) error {
+	frame.PushOperand(int(frame.NextParamByte()))
 	return nil
+}
+
+func InstrSiPush(_ *Thread, frame *Frame) error {
+	frame.PushOperand(int(frame.NextParamUint16()))
+	return nil
+}
+
+func instrLdc(idxLoader func(*Frame) uint16) Instruction {
+	return func(thread *Thread, frame *Frame) error {
+		switch entry := frame.CurrentClass().File().ConstantPool().Entry(idxLoader(frame)).(type) {
+		case int, float32, int64, float64:
+			frame.PushOperand(entry)
+
+		case class_file.StringCpInfo:
+			js, err := thread.VM().JavaString(thread, frame.CurrentClass().File().ConstantPool().Utf8(uint16(entry)))
+			if err != nil {
+				return err
+			}
+			frame.PushOperand(js)
+
+		case class_file.ClassCpInfo:
+			className := "java/lang/Class"
+			class, state, err := thread.VM().FindInitializedClass(&className, thread)
+			if err != nil {
+				return err
+			}
+			if state == FailedInitialization {
+				return fmt.Errorf("failed initialization of class class in LDC")
+			}
+			frame.PushOperand(NewInstance(class))
+
+		default:
+			return fmt.Errorf("LDC unsupport %T:%+v", entry, entry)
+		}
+
+		return nil
+	}
 }
 
 func instrLoad(_ *Thread, frame *Frame) error {
@@ -148,6 +201,11 @@ func instrLoadN(n int) Instruction {
 		frame.PushOperand(frame.Locals()[n])
 		return nil
 	}
+}
+
+func instrStore(_ *Thread, frame *Frame) error {
+	frame.SetLocal(int(frame.NextParamByte()), frame.PopOperand())
+	return nil
 }
 
 func instrStoreN(n int) Instruction {
@@ -176,7 +234,79 @@ func instrDup(n, x int) Instruction {
 	}
 }
 
-func instrIfCond(matcher func(int) bool) Instruction {
+func instrAdd[T int | int64]() Instruction {
+	return func(thread *Thread, frame *Frame) error {
+		v2, ok := frame.PopOperand().(T)
+		if !ok {
+			return fmt.Errorf("popped value2 for (i|l)add is invalid type")
+		}
+		v1, ok := frame.PopOperand().(T)
+		if !ok {
+			return fmt.Errorf("popped value1 for (i|l)add is invalid type")
+		}
+
+		frame.PushOperand(v1 + v2)
+		return nil
+	}
+}
+
+func instrShiftLeft[T int | int64](mask int) Instruction {
+	return func(_ *Thread, frame *Frame) error {
+		v2, ok := frame.PopOperand().(int)
+		if !ok {
+			return fmt.Errorf("popped value2 for (i|l)shl is invalid type")
+		}
+		v1, ok := frame.PopOperand().(T)
+		if !ok {
+			return fmt.Errorf("popped value1 for (i|l)shl is invalid type")
+		}
+
+		frame.PushOperand(v1 << (v2 & mask))
+		return nil
+	}
+}
+
+func instrShiftRight[T int | int64](mask int) Instruction {
+	return func(_ *Thread, frame *Frame) error {
+		v2, ok := frame.PopOperand().(int)
+		if !ok {
+			return fmt.Errorf("popped value2 for (i|l)shr is invalid type")
+		}
+		v1, ok := frame.PopOperand().(T)
+		if !ok {
+			return fmt.Errorf("popped value1 for (i|l)shr is invalid type")
+		}
+
+		frame.PushOperand(v1 >> (v2 & mask))
+		return nil
+	}
+}
+
+func instrAnd[T int | int64](_ *Thread, frame *Frame) error {
+	v2, ok := frame.PopOperand().(T)
+	if !ok {
+		return fmt.Errorf("popped value2 for (i|l)and is invalid type")
+	}
+	v1, ok := frame.PopOperand().(T)
+	if !ok {
+		return fmt.Errorf("popped value1 for (i|l)and is invalid type")
+	}
+
+	frame.PushOperand(v1 & v2)
+	return nil
+}
+
+func InstrI2L(_ *Thread, frame *Frame) error {
+	i, ok := frame.PopOperand().(int)
+	if !ok {
+		return fmt.Errorf("popped value for i2l is NOT int")
+	}
+
+	frame.PushOperand(int64(i))
+	return nil
+}
+
+func instrIf(matcher func(int) bool) Instruction {
 	return func(_ *Thread, frame *Frame) error {
 		branch := int16(frame.NextParamUint16())
 		value, ok := frame.PopOperand().(int)
@@ -185,6 +315,25 @@ func instrIfCond(matcher func(int) bool) Instruction {
 		}
 
 		if matcher(value) {
+			frame.JumpPC(uint16(int16(frame.PC()) + branch))
+		}
+		return nil
+	}
+}
+
+func instrIfICmp(comparator func(int, int) bool) Instruction {
+	return func(_ *Thread, frame *Frame) error {
+		branch := int16(frame.NextParamUint16())
+		v2, ok := frame.PopOperand().(int)
+		if !ok {
+			return fmt.Errorf("popped value2 for if_icmp<cond> is NOT int")
+		}
+		v1, ok := frame.PopOperand().(int)
+		if !ok {
+			return fmt.Errorf("popped value1 for if_icmp<cond> is NOT int")
+		}
+
+		if comparator(v1, v2) {
 			frame.JumpPC(uint16(int16(frame.PC()) + branch))
 		}
 		return nil
@@ -201,12 +350,30 @@ func instrReturn(thread *Thread, frame *Frame) error {
 	thread.PopFrame()
 	if thread.CurrentFrame() != nil {
 		thread.CurrentFrame().PushOperand(frame.PopOperand())
+	} else {
+		thread.SetResult(frame.PopOperand())
 	}
 	return nil
 }
 
 func instrReturnVoid(thread *Thread, _ *Frame) error {
 	thread.PopFrame()
+	return nil
+}
+
+func instrGetStatic(thread *Thread, frame *Frame) error {
+	className, name, desc := frame.CurrentClass().File().ConstantPool().Reference(frame.NextParamUint16())
+	class, state, err := thread.VM().FindInitializedClass(className, thread)
+	if err != nil {
+		return err
+	}
+	if state == FailedInitialization {
+		return fmt.Errorf("failed initialization of waiting class: %s", *className)
+	}
+
+	resolvedClass, resolvedField := class.ResolveField(*name, *desc)
+	frame.PushOperand(resolvedClass.GetStaticField(resolvedField.Name()))
+
 	return nil
 }
 

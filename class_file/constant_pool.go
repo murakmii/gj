@@ -17,7 +17,8 @@ type (
 		nameAndType uint16
 	}
 
-	ClassCpInfo uint16
+	ClassCpInfo  uint16
+	StringCpInfo uint16
 
 	NameAndTypeCpInfo struct {
 		name uint16
@@ -81,7 +82,7 @@ func readCP(r *util.BinReader) *ConstantPool {
 			cp.cpInfo[i] = ClassCpInfo(r.ReadUint16())
 
 		case strTag:
-			cp.cpInfo[i] = r.ReadUint16()
+			cp.cpInfo[i] = StringCpInfo(r.ReadUint16())
 
 		case fieldRefTag, methodRefTag, ifMethodRefTag:
 			cp.cpInfo[i] = &ReferenceCpInfo{class: r.ReadUint16(), nameAndType: r.ReadUint16()}
@@ -160,10 +161,12 @@ func (cp *ConstantPool) String() string {
 			i++ // long/double occupies 2 entries
 		case ClassCpInfo:
 			sb.WriteString(fmt.Sprintf("ClassInfo: %d", ci))
+		case StringCpInfo:
+			sb.WriteString(fmt.Sprintf("String: %d", ci))
 		case *NameAndTypeCpInfo:
 			sb.WriteString(fmt.Sprintf("NameAndType: Name=%d, Type=%d", ci.name, ci.desc))
 		case uint16:
-			sb.WriteString(fmt.Sprintf("Str/MethodType: %d", ci))
+			sb.WriteString(fmt.Sprintf("MethodType: %d", ci))
 		case *ReferenceCpInfo:
 			sb.WriteString(fmt.Sprintf("Field/Method/InterfaceMethodRef: Class=%d, NameAndType=%d", ci.class, ci.nameAndType))
 		case *MethodHandleCpInfo:

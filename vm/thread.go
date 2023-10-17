@@ -10,7 +10,9 @@ type Thread struct {
 	java        *Instance
 	derivedFrom *Thread
 	frameStack  []*Frame
-	unCatchEx   *Instance
+
+	result    interface{}
+	unCatchEx *Instance
 }
 
 func NewThread(vm *VM) *Thread {
@@ -83,6 +85,14 @@ func (thread *Thread) CurrentFrame() *Frame {
 		return nil
 	}
 	return thread.frameStack[len(thread.frameStack)-1]
+}
+
+func (thread *Thread) SetResult(value interface{}) {
+	thread.result = value
+}
+
+func (thread *Thread) GetResult() interface{} {
+	return thread.result
 }
 
 func (thread *Thread) HandleException(thrown *Instance) {

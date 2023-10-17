@@ -6,6 +6,7 @@ import (
 )
 
 type BinReader struct {
+	src    []byte
 	bytes  []byte
 	offset int
 }
@@ -19,6 +20,7 @@ func NewBinReader(src io.Reader) (*BinReader, error) {
 		return nil, err
 	}
 
+	r.src = r.bytes
 	return r, nil
 }
 
@@ -32,7 +34,8 @@ func (r *BinReader) SkipToAlign(align int) {
 }
 
 func (r *BinReader) Seek(pos int) {
-	// TODO: seek
+	r.bytes = r.src[pos:]
+	r.offset = pos
 }
 
 func (r *BinReader) Pos() int {
