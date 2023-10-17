@@ -17,6 +17,8 @@ type (
 		nameAndType uint16
 	}
 
+	ClassCpInfo uint16
+
 	NameAndTypeCpInfo struct {
 		name uint16
 		desc uint16
@@ -75,7 +77,10 @@ func readCP(r *util.BinReader) *ConstantPool {
 			cp.cpInfo[i] = math.Float64frombits(r.ReadUint64())
 			i++ // double occupies 2 entries
 
-		case classTag, strTag:
+		case classTag:
+			cp.cpInfo[i] = ClassCpInfo(r.ReadUint16())
+
+		case strTag:
 			cp.cpInfo[i] = r.ReadUint16()
 
 		case fieldRefTag, methodRefTag, ifMethodRefTag:
@@ -101,12 +106,16 @@ func readCP(r *util.BinReader) *ConstantPool {
 	return cp
 }
 
+func (cp *ConstantPool) Entry(index uint16) interface{} {
+	return cp.cpInfo[index]
+}
+
 func (cp *ConstantPool) ClassInfo(index uint16) *string {
-	classInfo, ok := cp.cpInfo[index].(uint16)
+	classInfo, ok := cp.cpInfo[index].(ClassCpInfo)
 	if !ok {
 		return nil
 	}
-	return cp.Utf8(classInfo)
+	return cp.Utf8(uint16(classInfo))
 }
 
 func (cp *ConstantPool) Utf8(index uint16) *string {
@@ -117,8 +126,8 @@ func (cp *ConstantPool) Utf8(index uint16) *string {
 	return s
 }
 
-func (cp *ConstantPool) Const(attr ConstantValueAttr) interface{} {
-	switch c := cp.cpInfo[attr].(type) {
+func (cp *ConstantPool) Const(index uint16) interface{} {
+	switch c := cp.cpInfo[index].(type) {
 	case uint16:
 		return cp.Utf8(c)
 	default:
@@ -149,10 +158,12 @@ func (cp *ConstantPool) String() string {
 		case int64, float64:
 			sb.WriteString(fmt.Sprintf("%T: %v", ci, ci))
 			i++ // long/double occupies 2 entries
+		case ClassCpInfo:
+			sb.WriteString(fmt.Sprintf("ClassInfo: %d", ci))
 		case *NameAndTypeCpInfo:
 			sb.WriteString(fmt.Sprintf("NameAndType: Name=%d, Type=%d", ci.name, ci.desc))
 		case uint16:
-			sb.WriteString(fmt.Sprintf("Class/Str/MethodType: %d", ci))
+			sb.WriteString(fmt.Sprintf("Str/MethodType: %d", ci))
 		case *ReferenceCpInfo:
 			sb.WriteString(fmt.Sprintf("Field/Method/InterfaceMethodRef: Class=%d, NameAndType=%d", ci.class, ci.nameAndType))
 		case *MethodHandleCpInfo:

@@ -151,7 +151,7 @@ func (class *Class) initialize(curThread *Thread) error {
 	// Initialize constant fields
 	for _, f := range class.file.Fields(class_file.StaticFlag & class_file.FinalFlag) {
 		if constValAttr, ok := f.ConstantValue(); ok {
-			constVal := class.file.ConstantPool().Const(constValAttr)
+			constVal := class.file.ConstantPool().Const(uint16(constValAttr))
 
 			switch cv := constVal.(type) {
 			case *string:

@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"fmt"
 	"github.com/murakmii/gj/class_file"
 )
 
@@ -68,6 +69,12 @@ func (thread *Thread) PushFrame(frame *Frame) {
 }
 
 func (thread *Thread) PopFrame() {
+	fmt.Printf("leave frame: %s.%s:%s\n",
+		thread.CurrentFrame().CurrentClass().File().ThisClass(),
+		*thread.CurrentFrame().CurrentMethod().Name(),
+		*thread.CurrentFrame().CurrentMethod().Descriptor(),
+	)
+
 	thread.frameStack = thread.frameStack[:len(thread.frameStack)-1]
 }
 

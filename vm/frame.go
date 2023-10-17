@@ -39,6 +39,10 @@ func NewFrame(curClass *Class, curMethod *class_file.MethodInfo) *Frame {
 	}
 }
 
+func (frame *Frame) SetLocal(index int, v interface{}) {
+	frame.locals[index] = v
+}
+
 func (frame *Frame) SetLocals(vars []interface{}) *Frame {
 	i := 0
 	for _, v := range vars {
@@ -46,6 +50,8 @@ func (frame *Frame) SetLocals(vars []interface{}) *Frame {
 
 		switch v.(type) {
 		case int64, float64:
+			i += 2
+		default:
 			i++
 		}
 	}

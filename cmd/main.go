@@ -8,6 +8,7 @@ import (
 	_ "github.com/murakmii/gj/vm/native"
 	"os"
 	"strings"
+	"unicode/utf16"
 )
 
 var (
@@ -98,6 +99,31 @@ func execVM(config *gj.Config) {
 		panic("string class initialization failed")
 	}
 
-	vm.NewInstance(javaLangString)
+	className = "java/lang/Class"
+	_, state, err = vmInstance.FindInitializedClass(&className, vm.NewThread(vmInstance))
+	if err != nil {
+		panic(err)
+	}
+	if state == vm.FailedInitialization {
+		panic("class class initialization failed")
+	}
+
 	fmt.Println("succeeded string class initialization")
+
+	u16 := utf16.Encode([]rune("sample text"))
+	charArray := vm.NewArray("C", len(u16))
+	for i, e := range u16 {
+		charArray.Set(i, int(e))
+	}
+
+	instance := vm.NewInstance(javaLangString)
+	class, method := javaLangString.ResolveMethod("<init>", "([C)V")
+	frame := vm.NewFrame(class, method).SetLocals([]interface{}{instance, charArray})
+
+	_, err = vm.NewThread(vmInstance).Execute(frame)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("constructor failed")
 }
