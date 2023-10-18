@@ -10,7 +10,8 @@ import (
 )
 
 type Config struct {
-	ClassPath []string `json:"class_path"`
+	ClassPath []string          `json:"class_path"`
+	SysProps  map[string]string `json:"system_properties"`
 }
 
 func ReadConfig(r io.Reader) (*Config, error) {

@@ -2,7 +2,6 @@ package vm
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/murakmii/gj/class_file"
 	"github.com/murakmii/gj/util"
 )
@@ -24,8 +23,6 @@ type (
 )
 
 func NewFrame(curClass *Class, curMethod *class_file.MethodInfo) *Frame {
-	fmt.Printf("enter new frame: %s.%s:%s\n", curClass.File().ThisClass(), *curMethod.Name(), *curMethod.Descriptor())
-
 	code := curMethod.Code()
 	codeReader, _ := util.NewBinReader(bytes.NewReader(code.Code()))
 
@@ -39,8 +36,9 @@ func NewFrame(curClass *Class, curMethod *class_file.MethodInfo) *Frame {
 	}
 }
 
-func (frame *Frame) SetLocal(index int, v interface{}) {
+func (frame *Frame) SetLocal(index int, v interface{}) *Frame {
 	frame.locals[index] = v
+	return frame
 }
 
 func (frame *Frame) SetLocals(vars []interface{}) *Frame {

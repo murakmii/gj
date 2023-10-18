@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"fmt"
 	"github.com/murakmii/gj/class_file"
 	"sync"
 )
@@ -53,12 +54,30 @@ func (class *Class) IsSubClassOf(className *string) bool {
 	return class.file.ThisClass() == *className || (class.super != nil && class.super.IsSubClassOf(className))
 }
 
+func (class *Class) IsInstanceOf(className *string) bool {
+	return class.IsSubClassOf(className) || class.Implements(className)
+}
+
+func (class *Class) Implements(ifName *string) bool {
+	for _, i := range class.file.Interfaces() {
+		if *i == *ifName {
+			return true
+		}
+	}
+	return class.super != nil && class.super.Implements(ifName)
+}
+
 func (class *Class) SetStaticField(name *string, value interface{}) {
 	class.fields[*name] = value
 }
 
-func (class *Class) GetStaticField(name *string) interface{} {
-	return class.fields[*name]
+func (class *Class) GetStaticField(field *class_file.FieldInfo) interface{} {
+	value, exist := class.fields[*field.Name()]
+	if !exist {
+		class.fields[*field.Name()] = field.DefaultValue()
+		value = field.DefaultValue()
+	}
+	return value
 }
 
 // See: https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.4.3.2
@@ -155,7 +174,10 @@ func (class *Class) initialize(curThread *Thread) error {
 
 			switch cv := constVal.(type) {
 			case *string:
-			// TODO: set java.lang.String instance
+				class.fields[*f.Name()], err = curThread.VM().JavaString(curThread, cv)
+				if err != nil {
+					return fmt.Errorf("failed to set default string value of static field: %s", err)
+				}
 			default:
 				class.fields[*f.Name()] = cv
 			}

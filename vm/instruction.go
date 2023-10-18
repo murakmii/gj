@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"github.com/murakmii/gj/class_file"
+	"math"
 )
 
 type (
@@ -27,6 +28,13 @@ func init() {
 	InstructionSet[0x07] = instrIconst(4)
 	InstructionSet[0x08] = instrIconst(5)
 
+	InstructionSet[0x09] = instrLConst(0)
+	InstructionSet[0x0A] = instrLConst(1)
+
+	InstructionSet[0x0B] = instrFConst(0.0)
+	InstructionSet[0x0C] = instrFConst(1.0)
+	InstructionSet[0x0D] = instrFConst(2.0)
+
 	InstructionSet[0x10] = InstrBiPush
 	InstructionSet[0x11] = InstrSiPush
 
@@ -35,7 +43,9 @@ func init() {
 	InstructionSet[0x14] = InstructionSet[0x13]
 
 	InstructionSet[0x15] = instrLoad
+	InstructionSet[0x16] = instrLoad
 	InstructionSet[0x17] = instrLoad
+	InstructionSet[0x18] = instrLoad
 	InstructionSet[0x19] = instrLoad
 
 	InstructionSet[0x1A] = instrLoadN(0)
@@ -53,6 +63,15 @@ func init() {
 	InstructionSet[0x2C] = instrLoadN(2)
 	InstructionSet[0x2D] = instrLoadN(3)
 
+	InstructionSet[0x2E] = instrALoad
+	InstructionSet[0x2F] = instrALoad
+	InstructionSet[0x30] = instrALoad
+	InstructionSet[0x31] = instrALoad
+	InstructionSet[0x32] = instrALoad
+	InstructionSet[0x33] = instrALoad
+	InstructionSet[0x34] = instrALoad
+	InstructionSet[0x35] = instrALoad
+
 	InstructionSet[0x36] = instrStore
 	InstructionSet[0x37] = instrStore
 	InstructionSet[0x38] = instrStore
@@ -68,6 +87,18 @@ func init() {
 	InstructionSet[0x4D] = instrStoreN(2)
 	InstructionSet[0x4E] = instrStoreN(3)
 
+	InstructionSet[0x4F] = InstrAStore
+	InstructionSet[0x50] = InstrAStore
+	InstructionSet[0x51] = InstrAStore
+	InstructionSet[0x52] = InstrAStore
+	InstructionSet[0x53] = InstrAStore
+	InstructionSet[0x54] = InstrAStore
+	InstructionSet[0x55] = InstrAStore
+	InstructionSet[0x56] = InstrAStore
+
+	InstructionSet[0x57] = InstrPop(1)
+	InstructionSet[0x58] = InstrPop(2)
+
 	InstructionSet[0x59] = instrDup(1, 0)
 	InstructionSet[0x5A] = instrDup(1, 1)
 	InstructionSet[0x5B] = instrDup(1, 2)
@@ -78,29 +109,49 @@ func init() {
 	InstructionSet[0x60] = instrAdd[int]()
 	InstructionSet[0x61] = instrAdd[int64]()
 
+	InstructionSet[0x64] = instrBiOp[int]("isub", func(v1 int, v2 int) int { return v1 - v2 })
+	InstructionSet[0x68] = instrBiOp[int]("imul", func(v1 int, v2 int) int { return v1 * v2 })
+	InstructionSet[0x70] = instrBiOp[int]("irem", func(v1 int, v2 int) int { return v1 % v2 })
+
+	InstructionSet[0x6A] = instrBiOp[float32]("fmul", func(v1 float32, v2 float32) float32 { return v1 * v2 })
+
 	InstructionSet[0x78] = instrShiftLeft[int](0x1F)
 	InstructionSet[0x79] = instrShiftLeft[int64](0x3F)
-	InstructionSet[0x7A] = instrShiftRight[int](0x1F)
+	InstructionSet[0x7A] = instrShiftRight[int](0x1F) // TODO: Arithmetic
 	InstructionSet[0x7B] = instrShiftRight[int64](0x3F)
+	InstructionSet[0x7C] = instrShiftRight[int](0x1F)
 
 	InstructionSet[0x7E] = instrAnd[int]
 	InstructionSet[0x7F] = instrAnd[int64]
 
+	InstructionSet[0x82] = instrBiOp[int]("ixor", func(v1 int, v2 int) int { return v1 ^ v2 })
+
+	InstructionSet[0x84] = instrIInc
+
 	InstructionSet[0x85] = InstrI2L
+	InstructionSet[0x86] = InstrI2F
+
+	InstructionSet[0x8B] = InstrF2I
+
+	InstructionSet[0x95] = instrFCmp(-1)
+	InstructionSet[0x96] = instrFCmp(1)
 
 	InstructionSet[0x99] = instrIf(func(i int) bool { return i == 0 })
 	InstructionSet[0x9A] = instrIf(func(i int) bool { return i != 0 })
 	InstructionSet[0x9B] = instrIf(func(i int) bool { return i < 0 })
-	InstructionSet[0x9C] = instrIf(func(i int) bool { return i <= 0 })
+	InstructionSet[0x9C] = instrIf(func(i int) bool { return i >= 0 })
 	InstructionSet[0x9D] = instrIf(func(i int) bool { return i > 0 })
-	InstructionSet[0x9E] = instrIf(func(i int) bool { return i >= 0 })
+	InstructionSet[0x9E] = instrIf(func(i int) bool { return i <= 0 })
 
 	InstructionSet[0x9F] = instrIfICmp(func(v1 int, v2 int) bool { return v1 == v2 })
 	InstructionSet[0xA0] = instrIfICmp(func(v1 int, v2 int) bool { return v1 != v2 })
 	InstructionSet[0xA1] = instrIfICmp(func(v1 int, v2 int) bool { return v1 < v2 })
-	InstructionSet[0xA2] = instrIfICmp(func(v1 int, v2 int) bool { return v1 <= v2 })
+	InstructionSet[0xA2] = instrIfICmp(func(v1 int, v2 int) bool { return v1 >= v2 })
 	InstructionSet[0xA3] = instrIfICmp(func(v1 int, v2 int) bool { return v1 > v2 })
-	InstructionSet[0xA4] = instrIfICmp(func(v1 int, v2 int) bool { return v1 >= v2 })
+	InstructionSet[0xA4] = instrIfICmp(func(v1 int, v2 int) bool { return v1 <= v2 })
+
+	InstructionSet[0xA5] = instrIfACmpEq
+	InstructionSet[0xA6] = instrIfACmpNe
 
 	InstructionSet[0xA7] = instrGoTo
 
@@ -119,11 +170,18 @@ func init() {
 	InstructionSet[0xB6] = instrInvokeVirtual
 	InstructionSet[0xB7] = instrInvokeSpecial
 	InstructionSet[0xB8] = instrInvokeStatic
+	InstructionSet[0xB9] = instrInvokeInterface
 
 	InstructionSet[0xBB] = instrNew
 	InstructionSet[0xBC] = instrNewArray
 	InstructionSet[0xBD] = instrANewArray
 	InstructionSet[0xBE] = instrArrayLength
+
+	InstructionSet[0xC0] = instrCheckCast
+	InstructionSet[0xC1] = instrInstanceOf
+
+	InstructionSet[0xC2] = instrMonitorEnter
+	InstructionSet[0xC3] = instrMonitorExit
 
 	InstructionSet[0xC6] = instrIfNull
 	InstructionSet[0xC7] = instrIfNonNull
@@ -135,6 +193,22 @@ func ExecInstr(thread *Thread, frame *Frame, op byte) error {
 		return fmt.Errorf("op(code = %#x) has been NOT implemented", op)
 	}
 	return InstructionSet[op](thread, frame)
+}
+
+func instrBiOp[T int | int64 | float32 | float64](name string, op func(T, T) T) Instruction {
+	return func(_ *Thread, frame *Frame) error {
+		v2, ok := frame.PopOperand().(T)
+		if !ok {
+			return fmt.Errorf("popped value2 for %s is invalid type", name)
+		}
+		v1, ok := frame.PopOperand().(T)
+		if !ok {
+			return fmt.Errorf("popped value1 for %s is invalid type", name)
+		}
+
+		frame.PushOperand(op(v1, v2))
+		return nil
+	}
 }
 
 func instrAConstNull(thread *Thread, frame *Frame) error {
@@ -149,13 +223,27 @@ func instrIconst(n int) Instruction {
 	}
 }
 
+func instrLConst(n int64) Instruction {
+	return func(_ *Thread, frame *Frame) error {
+		frame.PushOperand(n)
+		return nil
+	}
+}
+
+func instrFConst(n float32) Instruction {
+	return func(_ *Thread, frame *Frame) error {
+		frame.PushOperand(n)
+		return nil
+	}
+}
+
 func InstrBiPush(_ *Thread, frame *Frame) error {
-	frame.PushOperand(int(frame.NextParamByte()))
+	frame.PushOperand(int(int8(frame.NextParamByte())))
 	return nil
 }
 
 func InstrSiPush(_ *Thread, frame *Frame) error {
-	frame.PushOperand(int(frame.NextParamUint16()))
+	frame.PushOperand(int(int16(frame.NextParamUint16())))
 	return nil
 }
 
@@ -203,6 +291,14 @@ func instrLoadN(n int) Instruction {
 	}
 }
 
+func instrALoad(_ *Thread, frame *Frame) error {
+	index := frame.PopOperand().(int)
+	arrayref := frame.PopOperand().(*Array)
+
+	frame.PushOperand(arrayref.Get(index))
+	return nil
+}
+
 func instrStore(_ *Thread, frame *Frame) error {
 	frame.SetLocal(int(frame.NextParamByte()), frame.PopOperand())
 	return nil
@@ -211,6 +307,24 @@ func instrStore(_ *Thread, frame *Frame) error {
 func instrStoreN(n int) Instruction {
 	return func(thread *Thread, frame *Frame) error {
 		frame.SetLocal(n, frame.PopOperand())
+		return nil
+	}
+}
+
+func InstrAStore(_ *Thread, frame *Frame) error {
+	value := frame.PopOperand()
+	index := frame.PopOperand().(int)
+	arrayref := frame.PopOperand().(*Array)
+
+	arrayref.Set(index, value)
+	return nil
+}
+
+func InstrPop(n int) Instruction {
+	return func(_ *Thread, frame *Frame) error {
+		for i := 0; i < n; i++ {
+			frame.PopOperand()
+		}
 		return nil
 	}
 }
@@ -296,6 +410,38 @@ func instrAnd[T int | int64](_ *Thread, frame *Frame) error {
 	return nil
 }
 
+func instrIInc(_ *Thread, frame *Frame) error {
+	index := frame.NextParamByte()
+	count := int(int8(frame.NextParamByte()))
+
+	fmt.Printf("iinc index = %d, count = %d\n", index, count)
+
+	value := frame.Locals()[index].(int)
+	frame.SetLocal(int(index), value+count)
+
+	return nil
+}
+
+func InstrI2F(_ *Thread, frame *Frame) error {
+	i, ok := frame.PopOperand().(int)
+	if !ok {
+		return fmt.Errorf("popped value for i2f is NOT int")
+	}
+
+	frame.PushOperand(float32(i))
+	return nil
+}
+
+func InstrF2I(_ *Thread, frame *Frame) error {
+	f, ok := frame.PopOperand().(float32)
+	if !ok {
+		return fmt.Errorf("popped value for f2i is NOT float32")
+	}
+
+	frame.PushOperand(int(f))
+	return nil
+}
+
 func InstrI2L(_ *Thread, frame *Frame) error {
 	i, ok := frame.PopOperand().(int)
 	if !ok {
@@ -304,6 +450,33 @@ func InstrI2L(_ *Thread, frame *Frame) error {
 
 	frame.PushOperand(int64(i))
 	return nil
+}
+
+func instrFCmp(nanResult int) Instruction {
+	return func(_ *Thread, frame *Frame) error {
+		v2, ok := frame.PopOperand().(float32)
+		if !ok {
+			return fmt.Errorf("popped value2 for fcmp is NOT float32")
+		}
+		v1, ok := frame.PopOperand().(float32)
+		if !ok {
+			return fmt.Errorf("popped value1 for fcmp is NOT float32")
+		}
+
+		var result int
+		if math.IsNaN(float64(v1)) || math.IsNaN(float64(v2)) {
+			result = nanResult
+		} else if v1 > v2 {
+			result = 1
+		} else if v1 == v2 {
+			result = 0
+		} else {
+			result = -1
+		}
+
+		frame.PushOperand(result)
+		return nil
+	}
 }
 
 func instrIf(matcher func(int) bool) Instruction {
@@ -340,6 +513,62 @@ func instrIfICmp(comparator func(int, int) bool) Instruction {
 	}
 }
 
+func instrIfACmpEq(_ *Thread, frame *Frame) error {
+	branch := int16(frame.NextParamUint16())
+	value2 := frame.PopOperand()
+	value1 := frame.PopOperand()
+
+	if value1 == nil || value2 == nil {
+		if value1 == nil && value2 == nil {
+			frame.JumpPC(uint16(int16(frame.PC()) + branch))
+		}
+		return nil
+	}
+
+	v1, ok := value1.(*Instance)
+	if !ok {
+		return fmt.Errorf("popped value2 for if_acmpeq is NOT instance")
+	}
+
+	v2, ok := value2.(*Instance)
+	if !ok {
+		return fmt.Errorf("popped value1 for if_acmpeq is NOT instance")
+	}
+
+	if v1 == v2 {
+		frame.JumpPC(uint16(int16(frame.PC()) + branch))
+	}
+	return nil
+}
+
+func instrIfACmpNe(_ *Thread, frame *Frame) error {
+	branch := int16(frame.NextParamUint16())
+	value2 := frame.PopOperand()
+	value1 := frame.PopOperand()
+
+	if value1 == nil || value2 == nil {
+		if !(value1 == nil && value2 == nil) {
+			frame.JumpPC(uint16(int16(frame.PC()) + branch))
+		}
+		return nil
+	}
+
+	v1, ok := value1.(*Instance)
+	if !ok {
+		return fmt.Errorf("popped value2 for if_acmpeq is NOT instance")
+	}
+
+	v2, ok := value2.(*Instance)
+	if !ok {
+		return fmt.Errorf("popped value1 for if_acmpeq is NOT instance")
+	}
+
+	if v1 != v2 {
+		frame.JumpPC(uint16(int16(frame.PC()) + branch))
+	}
+	return nil
+}
+
 func instrGoTo(_ *Thread, frame *Frame) error {
 	branch := int16(frame.NextParamUint16())
 	frame.JumpPC(uint16(int16(frame.PC()) + branch))
@@ -372,7 +601,7 @@ func instrGetStatic(thread *Thread, frame *Frame) error {
 	}
 
 	resolvedClass, resolvedField := class.ResolveField(*name, *desc)
-	frame.PushOperand(resolvedClass.GetStaticField(resolvedField.Name()))
+	frame.PushOperand(resolvedClass.GetStaticField(resolvedField))
 
 	return nil
 }
@@ -394,13 +623,13 @@ func instrPutStatic(thread *Thread, frame *Frame) error {
 }
 
 func instrGetField(_ *Thread, frame *Frame) error {
-	class, name, _ := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
+	_, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
 	instance := frame.PopOperand().(*Instance)
 	if instance == nil {
 		return fmt.Errorf("objectref for getfield is null")
 	}
 
-	frame.PushOperand(instance.GetField(class, name))
+	frame.PushOperand(instance.GetField(name, desc))
 	return nil
 }
 
@@ -469,6 +698,25 @@ func instrInvokeStatic(thread *Thread, frame *Frame) error {
 	return thread.ExecMethod(resolvedClass, resolvedMethod)
 }
 
+func instrInvokeInterface(thread *Thread, frame *Frame) error {
+	_, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
+	instance := frame.PeekFromTop(class_file.ParseDescriptor(desc)).(*Instance)
+	if instance == nil {
+		return fmt.Errorf("receiver instance is null")
+	}
+
+	frame.NextParamUint16() // Skip 'count' and '0'
+
+	thread.DumpFrameStack()
+
+	resolvedClass, resolvedMethod := instance.Class().ResolveMethod(*name, *desc)
+	if resolvedClass == nil || !resolvedMethod.IsCallableForInstance() {
+		return fmt.Errorf("method not found: %s.%s", *name, *desc)
+	}
+
+	return thread.ExecMethod(resolvedClass, resolvedMethod)
+}
+
 func instrNew(thread *Thread, frame *Frame) error {
 	className := frame.curClass.File().ConstantPool().ClassInfo(frame.NextParamUint16())
 	class, state, err := thread.VM().FindInitializedClass(className, thread)
@@ -478,6 +726,8 @@ func instrNew(thread *Thread, frame *Frame) error {
 	if state == FailedInitialization {
 		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
+
+	fmt.Printf("****** new instance: %s\n", class.File().ThisClass())
 
 	frame.PushOperand(NewInstance(class))
 	return nil
@@ -500,6 +750,71 @@ func instrArrayLength(_ *Thread, frame *Frame) error {
 		return fmt.Errorf("called arraylength for instance is NOT array")
 	}
 	frame.PushOperand(array.Length())
+	return nil
+}
+
+func instrCheckCast(thread *Thread, frame *Frame) error {
+	className := frame.curClass.File().ConstantPool().ClassInfo(frame.NextParamUint16())
+
+	objRef := frame.PopOperand()
+	if objRef == nil {
+		frame.PushOperand(nil)
+		return nil
+	}
+
+	result := objRef
+	switch o := objRef.(type) {
+	case *Instance:
+		if o.Class().IsInstanceOf(className) {
+			_, state, err := thread.VM().FindInitializedClass(className, thread)
+			if err != nil {
+				return err
+			}
+			if state == FailedInitialization {
+				return fmt.Errorf("failed initialization of waiting class: %s", *className)
+			}
+			//o.Cast(class)
+
+			result = o
+		}
+	default:
+		//return fmt.Errorf("instanceof does NOT support object is NOT class instance: %+v", o)
+	}
+
+	frame.PushOperand(result)
+	return nil
+}
+
+func instrInstanceOf(_ *Thread, frame *Frame) error {
+	className := frame.curClass.File().ConstantPool().ClassInfo(frame.NextParamUint16())
+
+	objRef := frame.PopOperand()
+	if objRef == nil {
+		frame.PushOperand(0)
+		return nil
+	}
+
+	result := 0
+	switch o := objRef.(type) {
+	case *Instance:
+		if o.Class().IsInstanceOf(className) {
+			result = 1
+		}
+	default:
+		return fmt.Errorf("instanceof does NOT support object is NOT class instance")
+	}
+
+	frame.PushOperand(result)
+	return nil
+}
+
+func instrMonitorEnter(thread *Thread, frame *Frame) error {
+	frame.PopOperand().(*Instance).Monitor().Enter(thread)
+	return nil
+}
+
+func instrMonitorExit(thread *Thread, frame *Frame) error {
+	frame.PopOperand().(*Instance).Monitor().Exit()
 	return nil
 }
 

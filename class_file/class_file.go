@@ -233,6 +233,21 @@ func (f *FieldInfo) ConstantValue() (ConstantValueAttr, bool) {
 	return 0, false
 }
 
+func (f *FieldInfo) DefaultValue() interface{} {
+	switch (*f.desc)[0] {
+	case 'B', 'C', 'I', 'S', 'Z':
+		return 0
+	case 'F':
+		return float32(0.0)
+	case 'J':
+		return int64(0)
+	case 'D':
+		return float64(0.0)
+	default:
+		return nil
+	}
+}
+
 func (c *ClassFile) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString("# ClassFile file\n\n")

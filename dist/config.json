@@ -2,5 +2,22 @@
   "class_path": [
     "{{ .JAVA_HOME }}/jre/lib/*.jar",
     "{{ .WORKDIR}}"
-  ]
+  ],
+  "system_properties": {
+    "java.version": "1.8.0",
+    "java.vendor": "murakmii",
+    "java.vendor.url": "https://github.com/murakmii/gj",
+    "java.home": "{{ .JAVA_HOME }}",
+    "java.class.version": "52.0",
+    "java.class.path": "{{ .JAVA_HOME }}/jre/lib/*.jar:{{ .WORKDIR}}",
+    "os.name": "Amazon Linux",
+    "os.arch": "x86_64",
+    "os.version": "2",
+    "file.separator": "/",
+    "path.separator": ":",
+    "line.separator": "\n",
+    "user.name": "{{ .USER }}",
+    "user.home": "{{ .HOME }}",
+    "user.dir": "{{ .WORKDIR }}"
+  }
 }

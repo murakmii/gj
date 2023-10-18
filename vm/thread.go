@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"github.com/murakmii/gj/class_file"
+	"strings"
 )
 
 type Thread struct {
@@ -17,6 +18,10 @@ type Thread struct {
 
 func NewThread(vm *VM) *Thread {
 	return &Thread{vm: vm, java: nil}
+}
+
+func (thread *Thread) JavaThread() *Instance {
+	return thread.java
 }
 
 func (thread *Thread) SetJavaThread(java *Instance) {
@@ -66,7 +71,17 @@ func (thread *Thread) ExecMethod(class *Class, method *class_file.MethodInfo) er
 	return nil
 }
 
+func (thread *Thread) DumpFrameStack() {
+	fmt.Println("------------ Frame stack ------------")
+	for i, f := range thread.frameStack {
+		indent := strings.Repeat("  ", i)
+		fmt.Printf(indent+"%s.%s:%s\n", f.curClass.File().ThisClass(), *f.curMethod.Name(), *f.curMethod.Descriptor())
+	}
+	fmt.Println("-------------------------------------")
+}
+
 func (thread *Thread) PushFrame(frame *Frame) {
+	fmt.Printf("enter new frame: %s.%s:%s\n", frame.curClass.File().ThisClass(), *frame.curMethod.Name(), *frame.curMethod.Descriptor())
 	thread.frameStack = append(thread.frameStack, frame)
 }
 

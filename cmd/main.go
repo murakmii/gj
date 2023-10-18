@@ -8,7 +8,6 @@ import (
 	_ "github.com/murakmii/gj/vm/native"
 	"os"
 	"strings"
-	"unicode/utf16"
 )
 
 var (
@@ -85,12 +84,12 @@ func execPrint(classPaths []gj.ClassPath) {
 }
 
 func execVM(config *gj.Config) {
-	vmInstance, err := vm.InitVM(config)
+	_, err := vm.InitVM(config)
 	if err != nil {
 		panic(err)
 	}
 
-	className := "java/lang/String"
+	/*className := "java/lang/String"
 	javaLangString, state, err := vmInstance.FindInitializedClass(&className, vm.NewThread(vmInstance))
 	if err != nil {
 		panic(err)
@@ -134,5 +133,5 @@ func execVM(config *gj.Config) {
 		u16[i] = uint16(charArray.Get(i).(int))
 	}
 
-	fmt.Printf("**** concat = %s ****\n", string(utf16.Decode(u16)))
+	fmt.Printf("**** concat = %s ****\n", string(utf16.Decode(u16)))*/
 }
