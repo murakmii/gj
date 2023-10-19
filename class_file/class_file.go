@@ -134,6 +134,10 @@ func (c *ClassFile) Interfaces() []*string {
 	return names
 }
 
+func (c *ClassFile) AllFields() []*FieldInfo {
+	return c.fields
+}
+
 func (c *ClassFile) Fields(flags AccessFlag) []*FieldInfo {
 	fields := make([]*FieldInfo, 0)
 	for _, f := range fields {
@@ -223,6 +227,10 @@ func (f *FieldInfo) Name() *string {
 	return f.name
 }
 
+func (f *FieldInfo) Desc() *string {
+	return f.desc
+}
+
 func (f *FieldInfo) ConstantValue() (ConstantValueAttr, bool) {
 	for _, attr := range f.attributes {
 		if constVal, ok := attr.(ConstantValueAttr); ok {
@@ -231,6 +239,30 @@ func (f *FieldInfo) ConstantValue() (ConstantValueAttr, bool) {
 	}
 
 	return 0, false
+}
+
+func (f *FieldInfo) AccessFlag() AccessFlag {
+	return f.accessFlag
+}
+
+func (f *FieldInfo) Signature() (SignatureAttr, bool) {
+	for _, attr := range f.attributes {
+		if sigAttr, ok := attr.(SignatureAttr); ok {
+			return sigAttr, true
+		}
+	}
+
+	return 0, false
+}
+
+func (f *FieldInfo) RawAnnotations() []byte {
+	for _, attr := range f.attributes {
+		if annoAttr, ok := attr.(RuntimeVisibleAnnotationsAttr); ok {
+			return annoAttr.RawBytes()
+		}
+	}
+
+	return nil
 }
 
 func (f *FieldInfo) DefaultValue() interface{} {

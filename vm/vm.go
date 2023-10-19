@@ -16,6 +16,8 @@ type VM struct {
 
 	mainThread *Thread
 
+	jlString        *Class
+	jlClass         *Class
 	javaStringCache map[string]*Instance
 }
 
@@ -34,7 +36,7 @@ func InitVM(config *gj.Config) (*VM, error) {
 		return nil, err
 	}
 
-	err = vm.initializeClasses([]string{
+	classes, err := vm.initializeClasses([]string{
 		"java/lang/String",
 		"java/lang/System",
 		"java/lang/Class",
@@ -43,6 +45,9 @@ func InitVM(config *gj.Config) (*VM, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	vm.jlString = classes[0]
+	vm.jlClass = classes[2]
 
 	if err = vm.initializeMainThread(); err != nil {
 		return nil, err
@@ -82,6 +87,14 @@ func (vm *VM) SysProps() map[string]string {
 	return vm.sysProps
 }
 
+func (vm *VM) JavaLangStringClass() *Class {
+	return vm.jlString
+}
+
+func (vm *VM) JavaLangClassClass() *Class {
+	return vm.jlClass
+}
+
 func (vm *VM) FindInitializedClass(name *string, curThread *Thread) (*Class, ClassState, error) {
 	class, err := vm.FindClass(name)
 	if err != nil {
@@ -90,6 +103,16 @@ func (vm *VM) FindInitializedClass(name *string, curThread *Thread) (*Class, Cla
 
 	state, err := class.Initialize(curThread)
 	return class, state, err
+}
+
+func (vm *VM) JavaString2(thread *Thread, s *string) *Instance {
+	if cache, ok := vm.javaStringCache[*s]; ok {
+		return cache
+	}
+
+	js := GoString(*s).ToJavaString(thread)
+	vm.javaStringCache[*s] = js
+	return js
 }
 
 func (vm *VM) JavaString(thread *Thread, s *string) (*Instance, error) {
@@ -121,18 +144,22 @@ func (vm *VM) JavaString(thread *Thread, s *string) (*Instance, error) {
 	return js, nil
 }
 
-func (vm *VM) initializeClasses(classNames []string) error {
-	for _, className := range classNames {
-		_, state, err := vm.FindInitializedClass(&className, vm.mainThread)
+func (vm *VM) initializeClasses(classNames []string) ([]*Class, error) {
+	classes := make([]*Class, len(classNames))
+	var err error
+	var state ClassState
+
+	for i, className := range classNames {
+		classes[i], state, err = vm.FindInitializedClass(&className, vm.mainThread)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if state == FailedInitialization {
-			return fmt.Errorf("class '%s' initialization failed", className)
+			return nil, fmt.Errorf("class '%s' initialization failed", className)
 		}
 	}
 
-	return nil
+	return classes, nil
 }
 
 func (vm *VM) initializeMainThread() error {

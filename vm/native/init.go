@@ -53,6 +53,7 @@ func init() {
 	vm.RegisterNativeMethod("sun/misc/Unsafe/addressSize()I", misc.UnsafeAddressSize)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayBaseOffset(Ljava/lang/Class;)I", misc.UnsafeArrayBaseOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayIndexScale(Ljava/lang/Class;)I", misc.UnsafeArrayIndexScale)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/objectFieldOffset(Ljava/lang/reflect/Field;)J", misc.UnsafeObjectFieldOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/registerNatives()V", nop)
 
 	vm.RegisterNativeMethod("sun/reflect/Reflection/getCallerClass()Ljava/lang/Class;", reflect.ReflectionGetCallerClassV)
