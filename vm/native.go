@@ -16,7 +16,7 @@ func RegisterNativeMethod(id string, method NativeMethodFunc) {
 }
 
 func CallNativeMethod(thread *Thread, class *Class, method *class_file.MethodInfo, args []interface{}) error {
-	id := class.File().ThisClass() + "/" + *method.Name()
+	id := class.File().ThisClass() + "/" + *method.Name() + *method.Descriptor()
 	native, exist := nativeMethods[id]
 	if !exist {
 		return fmt.Errorf("native method not found: %s", id)

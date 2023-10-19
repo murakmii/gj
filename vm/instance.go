@@ -1,11 +1,13 @@
 package vm
 
-import "fmt"
-
 type Instance struct {
 	class   *Class
 	fields  map[string]interface{}
 	monitor *Monitor
+
+	// Any data for VM implementation. e.g.,
+	// * Class name for instance of java.lang.Class
+	vmData interface{}
 }
 
 func NewInstance(class *Class) *Instance {
@@ -18,13 +20,6 @@ func NewInstance(class *Class) *Instance {
 
 func (instance *Instance) Class() *Class {
 	return instance.class
-}
-
-func (instance *Instance) Cast(class *Class) {
-	if class.File().ThisClass() == "java/util/Collection" {
-		fmt.Printf("--------------------- interface cast!!!!! %s to %s---------------\n", instance.Class().File().ThisClass(), class.File().ThisClass())
-	}
-	instance.class = class
 }
 
 func (instance *Instance) GetField(name, desc *string) interface{} {
@@ -46,4 +41,13 @@ func (instance *Instance) PutField(class, name *string, value interface{}) {
 
 func (instance *Instance) Monitor() *Monitor {
 	return instance.monitor
+}
+
+func (instance *Instance) VMData() interface{} {
+	return instance.vmData
+}
+
+func (instance *Instance) SetVMData(data interface{}) *Instance {
+	instance.vmData = data
+	return instance
 }
