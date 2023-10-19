@@ -71,13 +71,27 @@ func (thread *Thread) ExecMethod(class *Class, method *class_file.MethodInfo) er
 	return nil
 }
 
-func (thread *Thread) DumpFrameStack() {
-	fmt.Println("------------ Frame stack ------------")
-	for i, f := range thread.frameStack {
-		indent := strings.Repeat("  ", i)
+func (thread *Thread) DumpFrameStack(showHeader bool) int {
+	if showHeader {
+		fmt.Println("------------ Frame stack ------------")
+	}
+
+	stackNum := 0
+	if thread.derivedFrom != nil {
+		stackNum += thread.derivedFrom.DumpFrameStack(false)
+	}
+
+	for _, f := range thread.frameStack {
+		stackNum++
+		indent := strings.Repeat("  ", stackNum)
 		fmt.Printf(indent+"%s.%s:%s\n", f.curClass.File().ThisClass(), *f.curMethod.Name(), *f.curMethod.Descriptor())
 	}
-	fmt.Println("-------------------------------------")
+
+	if showHeader {
+		fmt.Println("-------------------------------------")
+	}
+
+	return stackNum
 }
 
 func (thread *Thread) PushFrame(frame *Frame) {

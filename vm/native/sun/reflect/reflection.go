@@ -1,8 +1,22 @@
 package reflect
 
-import "github.com/murakmii/gj/vm"
+import (
+	"fmt"
+	"github.com/murakmii/gj/vm"
+)
 
-func ReflectionGetCallerClass(thread *vm.Thread, _ []interface{}) error {
-	thread.CurrentFrame().PushOperand(nil)
+func ReflectionGetCallerClassV(thread *vm.Thread, _ []interface{}) error {
+	className := "java/lang/Class"
+	class, state, err := thread.VM().FindInitializedClass(&className, thread)
+	if err != nil {
+		return err
+	}
+	if state == vm.FailedInitialization {
+		return fmt.Errorf("failed initialization of class class in Reflection.getCallerClass")
+	}
+
+	thread.CurrentFrame().PushOperand(vm.NewInstance(class).SetVMData(
+		thread.CurrentFrame().CurrentClass().File().ThisClass(),
+	))
 	return nil
 }

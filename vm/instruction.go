@@ -269,7 +269,9 @@ func instrLdc(idxLoader func(*Frame) uint16) Instruction {
 			if state == FailedInitialization {
 				return fmt.Errorf("failed initialization of class class in LDC")
 			}
-			frame.PushOperand(NewInstance(class))
+			frame.PushOperand(NewInstance(class).SetVMData(
+				frame.CurrentClass().File().ConstantPool().Utf8(uint16(entry)),
+			))
 
 		default:
 			return fmt.Errorf("LDC unsupport %T:%+v", entry, entry)
@@ -707,7 +709,7 @@ func instrInvokeInterface(thread *Thread, frame *Frame) error {
 
 	frame.NextParamUint16() // Skip 'count' and '0'
 
-	thread.DumpFrameStack()
+	thread.DumpFrameStack(true)
 
 	resolvedClass, resolvedMethod := instance.Class().ResolveMethod(*name, *desc)
 	if resolvedClass == nil || !resolvedMethod.IsCallableForInstance() {

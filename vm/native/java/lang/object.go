@@ -6,11 +6,6 @@ import (
 	"unsafe"
 )
 
-func ObjectRegisterNatives(thread *vm.Thread, args []interface{}) error {
-	fmt.Println("execute java/lang/Object.registerNatives")
-	return nil
-}
-
 func ObjectHashCode(thread *vm.Thread, args []interface{}) error {
 	instance, ok := args[0].(*vm.Instance)
 	if !ok {
