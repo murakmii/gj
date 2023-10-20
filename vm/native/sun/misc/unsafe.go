@@ -21,6 +21,34 @@ func UnsafeArrayIndexScale(thread *vm.Thread, _ []interface{}) error {
 	return nil
 }
 
+func UnsafeCompareAndSwapInt(thread *vm.Thread, args []interface{}) error {
+	obj, ok := args[1].(*vm.Instance)
+	if !ok {
+		return fmt.Errorf("Unsafe.compareAndSwapInt received arg[1] is NOT instance")
+	}
+
+	fID, ok := args[2].(int64)
+	if !ok {
+		return fmt.Errorf("Unsafe.compareAndSwapInt received arg[2] is NOT int64")
+	}
+
+	cmp := args[3].(int)
+	set := args[4].(int)
+
+	result, err := obj.CompareAndSwapInt(int(fID), cmp, set)
+	if err != nil {
+		return err
+	}
+
+	ret := 0
+	if result {
+		ret = 1
+	}
+
+	thread.CurrentFrame().PushOperand(ret)
+	return nil
+}
+
 func UnsafeCompareAndSwapObject(thread *vm.Thread, args []interface{}) error {
 	obj, ok := args[1].(*vm.Instance)
 	if !ok {
@@ -70,5 +98,22 @@ func UnsafeObjectFieldOffset(thread *vm.Thread, args []interface{}) error {
 	}
 
 	thread.CurrentFrame().PushOperand(int64(slot))
+	return nil
+}
+
+func UnsafeGetIntVolatile(thread *vm.Thread, args []interface{}) error {
+	instance := args[1].(*vm.Instance)
+	value := instance.GetFieldByID(int(args[2].(int64)))
+
+	result := 0
+	var ok bool
+	if value != nil {
+		result, ok = value.(int)
+		if !ok {
+			return fmt.Errorf("fetched value is NOT int(%+v) in Unsafe.getIntVolatile", value)
+		}
+	}
+
+	thread.CurrentFrame().PushOperand(result)
 	return nil
 }

@@ -43,6 +43,23 @@ func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
 	return nil
 }
 
+func ClassIsInterface(thread *vm.Thread, args []interface{}) error {
+	className := args[0].(*vm.Instance).VMData().(*string)
+
+	class, err := thread.VM().FindClass(className)
+	if err != nil {
+		return err
+	}
+
+	result := 0
+	if class.File().AccessFlag().Contain(class_file.InterfaceFlag) {
+		result = 1
+	}
+
+	thread.CurrentFrame().PushOperand(result)
+	return nil
+}
+
 func ClassIsPrimitive(thread *vm.Thread, args []interface{}) error {
 	className := *(args[0].(*vm.Instance).VMData().(*string))
 
@@ -73,7 +90,17 @@ func ClassGetName0(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassForName0(thread *vm.Thread, args []interface{}) error {
-	name := vm.JavaStringToGoString(args[0].(*vm.Instance))
+	// TODO: check strictly
+	name := strings.ReplaceAll(vm.JavaStringToGoString(args[0].(*vm.Instance)), ".", "/")
+
+	_, state, err := thread.VM().FindInitializedClass(&name, thread)
+	if err != nil {
+		return err
+	}
+	if state == vm.FailedInitialization {
+		return fmt.Errorf("failed initialization of class class in Class.getDeclaredFields0")
+	}
+
 	thread.CurrentFrame().PushOperand(thread.VM().JavaClass(&name))
 	return nil
 }

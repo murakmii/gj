@@ -26,6 +26,25 @@ func (instance *Instance) Class() *Class {
 	return instance.class
 }
 
+func (instance *Instance) CompareAndSwapInt(id int, expected, x int) (bool, error) {
+	// TODO: lock
+	if instance.fields[id] == nil {
+		instance.fields[id] = 0
+	}
+
+	target, ok := instance.fields[id].(int)
+	if !ok {
+		return false, fmt.Errorf("Instance.CompareAndSwapInt only suuport int value")
+	}
+
+	if target == expected {
+		instance.fields[id] = x
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func (instance *Instance) CompareAndSwap(id int, expected, x *Instance) (bool, error) {
 	// TODO: lock
 	// TODO: default value check
@@ -60,6 +79,10 @@ func (instance *Instance) GetField(name, desc *string) interface{} {
 	}
 
 	return value
+}
+
+func (instance *Instance) GetFieldByID(id int) interface{} {
+	return instance.fields[id]
 }
 
 func (instance *Instance) PutField(name, desc *string, value interface{}) {

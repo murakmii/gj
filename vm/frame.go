@@ -129,8 +129,12 @@ func (frame *Frame) Locals() []interface{} {
 func (frame *Frame) FindCurrentExceptionHandler(thrown *Instance) *uint16 {
 	for _, exTable := range frame.curMethod.Code().ExceptionTable() {
 		if exTable.HandlerStart() <= frame.pc && frame.pc < exTable.HandlerEnd() {
-			catchType := frame.curClass.File().ConstantPool().ClassInfo(exTable.CatchType())
+			if exTable.CatchType() == 0 {
+				handler := exTable.HandlerPC()
+				return &handler
+			}
 
+			catchType := frame.curClass.File().ConstantPool().ClassInfo(exTable.CatchType())
 			if thrown.Class().IsSubClassOf(catchType) {
 				handler := exTable.HandlerPC()
 				return &handler

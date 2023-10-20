@@ -28,6 +28,7 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Class/getName0()Ljava/lang/String;", lang.ClassGetName0)
 	vm.RegisterNativeMethod("java/lang/Class/getSuperclass()Ljava/lang/Class;", lang.ClassGetSuperClass)
 	vm.RegisterNativeMethod("java/lang/Class/isAssignableFrom(Ljava/lang/Class;)Z", lang.ClassIsAssignableFrom)
+	vm.RegisterNativeMethod("java/lang/Class/isInterface()Z", lang.ClassIsInterface)
 	vm.RegisterNativeMethod("java/lang/Class/isPrimitive()Z", lang.ClassIsPrimitive)
 	vm.RegisterNativeMethod("java/lang/Class/forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", lang.ClassForName0)
 	vm.RegisterNativeMethod("java/lang/Class/registerNatives()V", nop)
@@ -62,7 +63,9 @@ func init() {
 	vm.RegisterNativeMethod("sun/misc/Unsafe/addressSize()I", misc.UnsafeAddressSize)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayBaseOffset(Ljava/lang/Class;)I", misc.UnsafeArrayBaseOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayIndexScale(Ljava/lang/Class;)I", misc.UnsafeArrayIndexScale)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/compareAndSwapInt(Ljava/lang/Object;JII)Z", misc.UnsafeCompareAndSwapInt)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z", misc.UnsafeCompareAndSwapObject)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/getIntVolatile(Ljava/lang/Object;J)I", misc.UnsafeGetIntVolatile)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/objectFieldOffset(Ljava/lang/reflect/Field;)J", misc.UnsafeObjectFieldOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/registerNatives()V", nop)
 

@@ -53,6 +53,11 @@ func init() {
 	InstructionSet[0x1C] = instrLoadN(2)
 	InstructionSet[0x1D] = instrLoadN(3)
 
+	InstructionSet[0x1E] = instrLoadN(0)
+	InstructionSet[0x1F] = instrLoadN(1)
+	InstructionSet[0x20] = instrLoadN(2)
+	InstructionSet[0x21] = instrLoadN(3)
+
 	InstructionSet[0x22] = instrLoadN(0)
 	InstructionSet[0x23] = instrLoadN(1)
 	InstructionSet[0x24] = instrLoadN(2)
@@ -133,6 +138,8 @@ func init() {
 	InstructionSet[0x86] = InstrI2F
 
 	InstructionSet[0x8B] = InstrF2I
+
+	InstructionSet[0x92] = instrI2C
 
 	InstructionSet[0x94] = instrLCmp
 	InstructionSet[0x95] = instrFCmp(-1)
@@ -432,6 +439,16 @@ func InstrF2I(_ *Thread, frame *Frame) error {
 	}
 
 	frame.PushOperand(int(f))
+	return nil
+}
+
+func instrI2C(_ *Thread, frame *Frame) error {
+	i, ok := frame.PopOperand().(int)
+	if !ok {
+		return fmt.Errorf("popped value for f2i is NOT float32")
+	}
+
+	frame.PushOperand(i & 0xFFFF)
 	return nil
 }
 

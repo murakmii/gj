@@ -18,6 +18,8 @@
     "line.separator": "\n",
     "user.name": "{{ .USER }}",
     "user.home": "{{ .HOME }}",
-    "user.dir": "{{ .WORKDIR }}"
+    "user.dir": "{{ .WORKDIR }}",
+    "sun.stdout.encoding": "UTF-8",
+    "sun.stderr.encoding": "UTF-8"
   }
 }
