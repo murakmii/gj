@@ -24,6 +24,8 @@ func init() {
 
 	vm.RegisterNativeMethod("java/io/FileOutputStream/initIDs()V", nop)
 
+	vm.RegisterNativeMethod("java/io/UnixFileSystem/initIDs()V", nop)
+
 	vm.RegisterNativeMethod("java/lang/Class/desiredAssertionStatus0(Ljava/lang/Class;)Z", lang.ClassDesiredAssertionStatus0)
 	vm.RegisterNativeMethod("java/lang/Class/getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;", lang.ClassGetDeclaredConstructors)
 	vm.RegisterNativeMethod("java/lang/Class/getDeclaredFields0(Z)[Ljava/lang/reflect/Field;", lang.ClassGetDeclaredFields0)
@@ -36,6 +38,8 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Class/forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", lang.ClassForName0)
 	vm.RegisterNativeMethod("java/lang/Class/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/Class/getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;", lang.ClassGetPrimitiveClass)
+
+	vm.RegisterNativeMethod("java/lang/ClassLoader/registerNatives()V", nop)
 
 	vm.RegisterNativeMethod("java/lang/Double/doubleToRawLongBits(D)J", lang.DoubleDoubleToRawLongBits)
 	vm.RegisterNativeMethod("java/lang/Double/longBitsToDouble(J)D", lang.DoubleLongBitsToDouble)
@@ -77,6 +81,9 @@ func init() {
 	vm.RegisterNativeMethod("sun/misc/Unsafe/getIntVolatile(Ljava/lang/Object;J)I", misc.UnsafeGetIntVolatile)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/objectFieldOffset(Ljava/lang/reflect/Field;)J", misc.UnsafeObjectFieldOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/registerNatives()V", nop)
+
+	vm.RegisterNativeMethod("sun/misc/Signal/findSignal(Ljava/lang/String;)I", misc.SignalFindSignal)
+	vm.RegisterNativeMethod("sun/misc/Signal/handle0(IJ)J", misc.SignalHandle)
 
 	vm.RegisterNativeMethod("sun/reflect/NativeConstructorAccessorImpl/newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;", reflect.NativeConstructorAccessorImplNewInstance0)
 

@@ -49,6 +49,10 @@ func InitVM(config *gj.Config) (*VM, error) {
 	vm.jlString = classes[0]
 	vm.jlClass = classes[2]
 
+	// Disable native library loading. Return(0xB1) immediately
+	classes[1].File().FindMethod("loadLibrary", "(Ljava/lang/String;)V").
+		Code().OverrideCode([]byte{0xB1})
+
 	_, err = vm.initializeClasses([]string{"java/lang/ThreadGroup", "java/lang/Thread"})
 	if err != nil {
 		return nil, err

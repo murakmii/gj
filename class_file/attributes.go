@@ -161,6 +161,10 @@ func (attr *CodeAttr) Code() []byte {
 	return attr.code
 }
 
+func (attr *CodeAttr) OverrideCode(code []byte) {
+	attr.code = code
+}
+
 func (attr *CodeAttr) ExceptionTable() []*ExceptionTable {
 	return attr.exceptionTables
 }
