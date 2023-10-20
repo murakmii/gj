@@ -64,6 +64,28 @@ func ClassForName0(thread *vm.Thread, args []interface{}) error {
 	return nil
 }
 
+func ClassGetSuperClass(thread *vm.Thread, args []interface{}) error {
+	classInstance := args[0].(*vm.Instance)
+
+	class, state, err := thread.VM().FindInitializedClass(classInstance.VMData().(*string), thread)
+	if err != nil {
+		return err
+	}
+	if state == vm.FailedInitialization {
+		return fmt.Errorf("failed initialization of class class in Class.getDeclaredFields0")
+	}
+
+	if class.Super() == nil {
+		thread.CurrentFrame().PushOperand(nil)
+		return nil
+	}
+
+	superName := class.Super().File().ThisClass()
+	thread.CurrentFrame().PushOperand(
+		vm.NewInstance(thread.VM().JavaLangClassClass()).SetVMData(&superName))
+	return nil
+}
+
 func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 	class := args[0].(*vm.Instance)
 	pubOnly := args[1].(int) == 1
@@ -115,7 +137,7 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 			thread.VM().JavaString2(thread, f.Name()),
 			vm.NewInstance(thread.VM().JavaLangClassClass()).SetVMData(f.Desc()),
 			int(f.AccessFlag()),
-			0,
+			f.ID(),
 			signature,
 			annotation,
 		}))

@@ -110,6 +110,7 @@ func init() {
 	InstructionSet[0x61] = instrAdd[int64]()
 
 	InstructionSet[0x64] = instrBiOp[int]("isub", func(v1 int, v2 int) int { return v1 - v2 })
+	InstructionSet[0x65] = instrBiOp[int64]("lsub", func(v1 int64, v2 int64) int64 { return v1 - v2 })
 	InstructionSet[0x68] = instrBiOp[int]("imul", func(v1 int, v2 int) int { return v1 * v2 })
 	InstructionSet[0x70] = instrBiOp[int]("irem", func(v1 int, v2 int) int { return v1 % v2 })
 
@@ -123,7 +124,7 @@ func init() {
 
 	InstructionSet[0x7E] = instrAnd[int]
 	InstructionSet[0x7F] = instrAnd[int64]
-
+	InstructionSet[0x80] = instrBiOp[int]("ior", func(v1 int, v2 int) int { return v1 | v2 })
 	InstructionSet[0x82] = instrBiOp[int]("ixor", func(v1 int, v2 int) int { return v1 ^ v2 })
 
 	InstructionSet[0x84] = instrIInc
@@ -133,6 +134,7 @@ func init() {
 
 	InstructionSet[0x8B] = InstrF2I
 
+	InstructionSet[0x94] = instrLCmp
 	InstructionSet[0x95] = instrFCmp(-1)
 	InstructionSet[0x96] = instrFCmp(1)
 
@@ -177,6 +179,8 @@ func init() {
 	InstructionSet[0xBD] = instrANewArray
 	InstructionSet[0xBE] = instrArrayLength
 
+	InstructionSet[0xBF] = instrAThrow
+
 	InstructionSet[0xC0] = instrCheckCast
 	InstructionSet[0xC1] = instrInstanceOf
 
@@ -188,7 +192,6 @@ func init() {
 }
 
 func ExecInstr(thread *Thread, frame *Frame, op byte) error {
-	fmt.Printf("exec instr %#x\n", op)
 	if InstructionSet[op] == nil {
 		return fmt.Errorf("op(code = %#x) has been NOT implemented", op)
 	}
@@ -416,8 +419,6 @@ func instrIInc(_ *Thread, frame *Frame) error {
 	index := frame.NextParamByte()
 	count := int(int8(frame.NextParamByte()))
 
-	fmt.Printf("iinc index = %d, count = %d\n", index, count)
-
 	value := frame.Locals()[index].(int)
 	frame.SetLocal(int(index), value+count)
 
@@ -451,6 +452,26 @@ func InstrI2L(_ *Thread, frame *Frame) error {
 	}
 
 	frame.PushOperand(int64(i))
+	return nil
+}
+
+func instrLCmp(_ *Thread, frame *Frame) error {
+	v2, ok := frame.PopOperand().(int64)
+	if !ok {
+		return fmt.Errorf("popped value2 for (i|l)cmp is invalid")
+	}
+	v1, ok := frame.PopOperand().(int64)
+	if !ok {
+		return fmt.Errorf("popped value1 for (i|l)cmp is invalid")
+	}
+
+	result := 0
+	if v1 > v2 {
+		result = 1
+	} else if v1 < v2 {
+		result = -1
+	}
+	frame.PushOperand(result)
 	return nil
 }
 
@@ -619,7 +640,7 @@ func instrPutStatic(thread *Thread, frame *Frame) error {
 	}
 
 	resolvedClass, resolvedField := class.ResolveField(*name, *desc)
-	resolvedClass.SetStaticField(resolvedField.Name(), frame.PopOperand())
+	resolvedClass.SetStaticField(resolvedField, frame.PopOperand())
 
 	return nil
 }
@@ -636,14 +657,14 @@ func instrGetField(_ *Thread, frame *Frame) error {
 }
 
 func instrPutField(_ *Thread, frame *Frame) error {
-	class, name, _ := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
+	_, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
 	value := frame.PopOperand()
 	instance := frame.PopOperand().(*Instance)
 	if instance == nil {
 		return fmt.Errorf("objectref for getfield is null")
 	}
 
-	instance.PutField(class, name, value)
+	instance.PutField(name, desc, value)
 	return nil
 }
 
@@ -752,6 +773,11 @@ func instrArrayLength(_ *Thread, frame *Frame) error {
 		return fmt.Errorf("called arraylength for instance is NOT array")
 	}
 	frame.PushOperand(array.Length())
+	return nil
+}
+
+func instrAThrow(thread *Thread, frame *Frame) error {
+	thread.HandleException(frame.PopOperand().(*Instance))
 	return nil
 }
 

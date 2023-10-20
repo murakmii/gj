@@ -15,8 +15,20 @@ func ReflectionGetCallerClassV(thread *vm.Thread, _ []interface{}) error {
 		return fmt.Errorf("failed initialization of class class in Reflection.getCallerClass")
 	}
 
-	thread.CurrentFrame().PushOperand(vm.NewInstance(class).SetVMData(
-		thread.CurrentFrame().CurrentClass().File().ThisClass(),
-	))
+	callerClassName := thread.InvokerFrame().CurrentClass().File().ThisClass()
+	thread.CurrentFrame().PushOperand(vm.NewInstance(class).SetVMData(&callerClassName))
+	return nil
+}
+
+func ReflectionGetClassAccessFlags(thread *vm.Thread, args []interface{}) error {
+	className := args[0].(*vm.Instance).VMData().(*string)
+	fmt.Printf("get access flags for %s\n", *className)
+
+	class, err := thread.VM().FindClass(className)
+	if err != nil {
+		return err
+	}
+
+	thread.CurrentFrame().PushOperand(int(class.File().AccessFlag()))
 	return nil
 }

@@ -71,6 +71,22 @@ func (thread *Thread) ExecMethod(class *Class, method *class_file.MethodInfo) er
 	return nil
 }
 
+func (thread *Thread) StackTrack() []string {
+	var trace []string
+
+	if thread.derivedFrom != nil {
+		for _, t := range thread.derivedFrom.StackTrack() {
+			trace = append(trace, t)
+		}
+	}
+
+	for _, f := range thread.frameStack {
+		trace = append(trace, fmt.Sprintf("%s.%s:%s", f.curClass.File().ThisClass(), *f.curMethod.Name(), *f.curMethod.Descriptor()))
+	}
+
+	return trace
+}
+
 func (thread *Thread) DumpFrameStack(showHeader bool) int {
 	if showHeader {
 		fmt.Println("------------ Frame stack ------------")
@@ -96,6 +112,15 @@ func (thread *Thread) DumpFrameStack(showHeader bool) int {
 
 func (thread *Thread) PushFrame(frame *Frame) {
 	fmt.Printf("enter new frame: %s.%s:%s\n", frame.curClass.File().ThisClass(), *frame.curMethod.Name(), *frame.curMethod.Descriptor())
+
+	if frame.CurrentClass().File().ThisClass() == "sun/reflect/Reflection" &&
+		*(frame.CurrentMethod().Name()) == "isSameClassPackage" && len(frame.Locals()) >= 4 {
+		c1 := frame.Locals()[1].(*Instance)
+		c2 := frame.Locals()[3].(*Instance)
+
+		fmt.Printf("--------------------------------- isSameClassPackage c=%s, m=%s\n", JavaStringToGoString(c1), JavaStringToGoString(c2))
+	}
+
 	thread.frameStack = append(thread.frameStack, frame)
 }
 
@@ -107,6 +132,13 @@ func (thread *Thread) PopFrame() {
 	)
 
 	thread.frameStack = thread.frameStack[:len(thread.frameStack)-1]
+}
+
+func (thread *Thread) InvokerFrame() *Frame {
+	if len(thread.frameStack) < 2 {
+		return nil
+	}
+	return thread.frameStack[len(thread.frameStack)-2]
 }
 
 func (thread *Thread) CurrentFrame() *Frame {

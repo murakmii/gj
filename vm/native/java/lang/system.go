@@ -5,11 +5,6 @@ import (
 	"github.com/murakmii/gj/vm"
 )
 
-func SystemRegisterNatives(thread *vm.Thread, args []interface{}) error {
-	fmt.Println("execute java/lang/System.registerNatives")
-	return nil
-}
-
 func SystemArrayCopy(thread *vm.Thread, args []interface{}) error {
 	src := args[0].(*vm.Array)
 	srcStart := args[1].(int)

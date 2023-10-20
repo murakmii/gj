@@ -19,6 +19,7 @@ func CallNativeMethod(thread *Thread, class *Class, method *class_file.MethodInf
 	id := class.File().ThisClass() + "/" + *method.Name() + *method.Descriptor()
 	native, exist := nativeMethods[id]
 	if !exist {
+		thread.DumpFrameStack(true)
 		return fmt.Errorf("native method not found: %s", id)
 	}
 	return native(thread, args)

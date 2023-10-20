@@ -6,6 +6,7 @@ import (
 	"github.com/murakmii/gj/util"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -17,13 +18,19 @@ type (
 		this       uint16
 		super      uint16
 		interfaces []uint16
+
 		fields     []*FieldInfo
+		numIFields int // count of instance field exists in fields
+
 		methods    []*MethodInfo
 		attributes []interface{}
 	}
 
-	FieldInfo  reference
 	MethodInfo reference
+	FieldInfo  struct {
+		*reference
+		id int
+	}
 
 	reference struct {
 		accessFlag AccessFlag
@@ -68,7 +75,31 @@ func readClassFile(cfReader io.Reader) (*ClassFile, error) {
 	class.this = r.ReadUint16()
 	class.super = r.ReadUint16()
 	class.interfaces = readInterfaces(r)
-	class.fields = readReference[FieldInfo](r, class.cp)
+
+	class.fields = make([]*FieldInfo, 0)
+	class.numIFields = 0
+
+	sFieldID := 0
+	for _, r := range readReference[reference](r, class.cp) {
+		f := &FieldInfo{reference: r, id: -1}
+		if !f.accessFlag.Contain(StaticFlag) {
+			class.numIFields++
+		} else {
+			// ID of static field does not include super class offset.
+			// So, this could be set in this time.
+			f.SetID(sFieldID)
+			sFieldID++
+		}
+		class.fields = append(class.fields, f)
+	}
+
+	// Move all instance fields to head of fields.
+	// So, fields[0:numIFields] is instance fields, fields[numIFields:] is static fields.
+	sort.Slice(class.fields, func(i, j int) bool {
+		return !class.fields[i].accessFlag.Contain(StaticFlag) &&
+			class.fields[j].accessFlag.Contain(StaticFlag)
+	})
+
 	class.methods = readReference[MethodInfo](r, class.cp)
 	class.attributes = readAttributes(r, class.cp)
 
@@ -86,7 +117,7 @@ func readInterfaces(r *util.BinReader) []uint16 {
 	return interfaces
 }
 
-func readReference[T FieldInfo | MethodInfo](r *util.BinReader, cp *ConstantPool) []*T {
+func readReference[T reference | MethodInfo](r *util.BinReader, cp *ConstantPool) []*T {
 	count := r.ReadUint16()
 	refs := make([]*T, count)
 
@@ -100,6 +131,10 @@ func readReference[T FieldInfo | MethodInfo](r *util.BinReader, cp *ConstantPool
 	}
 
 	return refs
+}
+
+func (c *ClassFile) AccessFlag() AccessFlag {
+	return c.accessFlag
 }
 
 func (c *ClassFile) ConstantPool() *ConstantPool {
@@ -138,15 +173,12 @@ func (c *ClassFile) AllFields() []*FieldInfo {
 	return c.fields
 }
 
-func (c *ClassFile) Fields(flags AccessFlag) []*FieldInfo {
-	fields := make([]*FieldInfo, 0)
-	for _, f := range fields {
-		if f.accessFlag.Contain(flags) {
-			fields = append(fields, f)
-		}
-	}
+func (c *ClassFile) InstanceFields() []*FieldInfo {
+	return c.fields[:c.numIFields]
+}
 
-	return fields
+func (c *ClassFile) StaticFields() []*FieldInfo {
+	return c.fields[c.numIFields:]
 }
 
 func (c *ClassFile) FindField(name, desc string) *FieldInfo {
@@ -156,6 +188,10 @@ func (c *ClassFile) FindField(name, desc string) *FieldInfo {
 		}
 	}
 	return nil
+}
+
+func (c *ClassFile) FindFieldByIndex(index int) *FieldInfo {
+	return c.fields[index]
 }
 
 func (c *ClassFile) FindMethod(name, desc string) *MethodInfo {
@@ -223,6 +259,14 @@ func (m *MethodInfo) NumArgs() int {
 	return n
 }
 
+func (f *FieldInfo) ID() int {
+	return f.id
+}
+
+func (f *FieldInfo) SetID(id int) {
+	f.id = id
+}
+
 func (f *FieldInfo) Name() *string {
 	return f.name
 }
@@ -263,6 +307,11 @@ func (f *FieldInfo) RawAnnotations() []byte {
 	}
 
 	return nil
+}
+
+func (f *FieldInfo) NullableDefaultValue() bool {
+	d := (*f.desc)[0]
+	return d == 'L' || d == '['
 }
 
 func (f *FieldInfo) DefaultValue() interface{} {

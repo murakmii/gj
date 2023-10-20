@@ -5,8 +5,8 @@ import "unicode/utf16"
 type GoString string
 
 var (
-	javaLangString           = "java/lang/String"
 	javaLangStringValueField = "value"
+	javaLangStringValueDesc  = "[C"
 )
 
 func (s GoString) ToJavaString(thread *Thread) *Instance {
@@ -18,6 +18,19 @@ func (s GoString) ToJavaString(thread *Thread) *Instance {
 		charArray.Set(i, int(e))
 	}
 
-	js.PutField(&javaLangString, &javaLangStringValueField, charArray)
+	js.PutField(&javaLangStringValueField, &javaLangStringValueDesc, charArray)
 	return js
+}
+
+func JavaStringToGoString(instance *Instance) string {
+	value := "value"
+	valueDesc := "[C"
+	charArray := instance.GetField(&value, &valueDesc).(*Array)
+
+	u16 := make([]uint16, charArray.Length())
+	for i := 0; i < charArray.Length(); i++ {
+		u16[i] = uint16(charArray.Get(i).(int))
+	}
+
+	return string(utf16.Decode(u16))
 }

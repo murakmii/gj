@@ -3,16 +3,18 @@ package vm
 import (
 	"fmt"
 	"github.com/murakmii/gj/class_file"
+	"strings"
 	"sync"
 )
 
 type (
 	Class struct {
-		file     *class_file.ClassFile
-		fields   map[string]interface{}
-		state    ClassState
-		initCond *sync.Cond
-		initBy   *Thread
+		file         *class_file.ClassFile
+		fields       []interface{}
+		totalIFields int
+		state        ClassState
+		initCond     *sync.Cond
+		initBy       *Thread
 
 		super      *Class
 		interfaces []*Class
@@ -30,11 +32,12 @@ const (
 
 func NewClass(file *class_file.ClassFile) *Class {
 	return &Class{
-		file:     file,
-		fields:   make(map[string]interface{}),
-		state:    NotInitialized,
-		initCond: sync.NewCond(&sync.Mutex{}),
-		initBy:   nil,
+		file:         file,
+		fields:       make([]interface{}, len(file.AllFields())-len(file.InstanceFields())),
+		totalIFields: -1,
+		state:        NotInitialized,
+		initCond:     sync.NewCond(&sync.Mutex{}),
+		initBy:       nil,
 
 		// Set in initialize method
 		super:      nil,
@@ -67,14 +70,18 @@ func (class *Class) Implements(ifName *string) bool {
 	return class.super != nil && class.super.Implements(ifName)
 }
 
-func (class *Class) SetStaticField(name *string, value interface{}) {
-	class.fields[*name] = value
+func (class *Class) TotalInstanceFields() int {
+	return class.totalIFields
+}
+
+func (class *Class) SetStaticField(field *class_file.FieldInfo, value interface{}) {
+	class.fields[field.ID()] = value
 }
 
 func (class *Class) GetStaticField(field *class_file.FieldInfo) interface{} {
-	value, exist := class.fields[*field.Name()]
-	if !exist {
-		class.fields[*field.Name()] = field.DefaultValue()
+	value := class.fields[field.ID()]
+	if value == nil && !field.NullableDefaultValue() {
+		class.fields[field.ID()] = field.DefaultValue()
 		value = field.DefaultValue()
 	}
 	return value
@@ -167,19 +174,23 @@ func (class *Class) initialize(curThread *Thread) error {
 		class.initCond.L.Unlock()
 	}()
 
+	if _, err := class.initializeFieldID(curThread.VM()); err != nil {
+		return err
+	}
+
 	// Initialize constant fields
-	for _, f := range class.file.Fields(class_file.StaticFlag & class_file.FinalFlag) {
+	for _, f := range class.file.StaticFields() {
 		if constValAttr, ok := f.ConstantValue(); ok {
 			constVal := class.file.ConstantPool().Const(uint16(constValAttr))
 
 			switch cv := constVal.(type) {
 			case *string:
-				class.fields[*f.Name()], err = curThread.VM().JavaString(curThread, cv)
+				class.fields[f.ID()], err = curThread.VM().JavaString(curThread, cv)
 				if err != nil {
 					return fmt.Errorf("failed to set default string value of static field: %s", err)
 				}
 			default:
-				class.fields[*f.Name()] = cv
+				class.fields[f.ID()] = cv
 			}
 		}
 	}
@@ -212,10 +223,49 @@ func (class *Class) initialize(curThread *Thread) error {
 
 		if unCatchEx != nil {
 			state = FailedInitialization
+
+			fmt.Println("------------------------")
+
+			//detail := "detailMessage"
+			//detailDesc := "Ljava/lang/String;"
+			//fmt.Printf("!!! exception: %s\n\n", JavaStringToGoString(unCatchEx.GetField(&detail, &detailDesc).(*Instance)))
+
+			for i, t := range unCatchEx.VMData().([]string) {
+				fmt.Printf("%s%s\n", strings.Repeat(" ", i), t)
+			}
+
+			fmt.Println("------------------------")
+
 			return nil
 		}
 	}
 
 	state = Initialized
 	return nil
+}
+
+func (class *Class) initializeFieldID(vm *VM) (int, error) {
+	if class.totalIFields != -1 {
+		return class.totalIFields, nil
+	}
+
+	id := 0
+	if class.file.SuperClass() != nil {
+		super, err := vm.FindClass(class.file.SuperClass())
+		if err != nil {
+			return -1, err
+		}
+		id, err = super.initializeFieldID(vm)
+		if err != nil {
+			return -1, err
+		}
+	}
+
+	for _, f := range class.file.InstanceFields() {
+		f.SetID(id)
+		id++
+	}
+
+	class.totalIFields = id
+	return id, nil
 }

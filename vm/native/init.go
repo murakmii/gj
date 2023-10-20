@@ -26,6 +26,7 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Class/desiredAssertionStatus0(Ljava/lang/Class;)Z", lang.ClassDesiredAssertionStatus0)
 	vm.RegisterNativeMethod("java/lang/Class/getDeclaredFields0(Z)[Ljava/lang/reflect/Field;", lang.ClassGetDeclaredFields0)
 	vm.RegisterNativeMethod("java/lang/Class/getName0()Ljava/lang/String;", lang.ClassGetName0)
+	vm.RegisterNativeMethod("java/lang/Class/getSuperclass()Ljava/lang/Class;", lang.ClassGetSuperClass)
 	vm.RegisterNativeMethod("java/lang/Class/forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", lang.ClassForName0)
 	vm.RegisterNativeMethod("java/lang/Class/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/Class/getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;", lang.ClassGetPrimitiveClass)
@@ -35,10 +36,11 @@ func init() {
 
 	vm.RegisterNativeMethod("java/lang/Float/floatToRawIntBits(F)I", lang.FloatFloatToRawIntBits)
 
+	vm.RegisterNativeMethod("java/lang/Object/getClass()Ljava/lang/Class;", lang.ObjectGetClass)
 	vm.RegisterNativeMethod("java/lang/Object/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/Object/hashCode()I", lang.ObjectHashCode)
 
-	vm.RegisterNativeMethod("java/lang/System/arraycopy", lang.SystemArrayCopy)
+	vm.RegisterNativeMethod("java/lang/System/arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V", lang.SystemArrayCopy)
 	vm.RegisterNativeMethod("java/lang/System/initProperties(Ljava/util/Properties;)Ljava/util/Properties;", lang.SystemInitProperties)
 	vm.RegisterNativeMethod("java/lang/System/registerNatives()V", nop)
 
@@ -50,13 +52,17 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Thread/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/Thread/setPriority0(I)V", nop)
 
+	vm.RegisterNativeMethod("java/lang/Throwable/fillInStackTrace(I)Ljava/lang/Throwable;", lang.ThrowableFillInStackTrace)
+
 	vm.RegisterNativeMethod("sun/misc/Unsafe/addressSize()I", misc.UnsafeAddressSize)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayBaseOffset(Ljava/lang/Class;)I", misc.UnsafeArrayBaseOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayIndexScale(Ljava/lang/Class;)I", misc.UnsafeArrayIndexScale)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z", misc.UnsafeCompareAndSwapObject)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/objectFieldOffset(Ljava/lang/reflect/Field;)J", misc.UnsafeObjectFieldOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/registerNatives()V", nop)
 
 	vm.RegisterNativeMethod("sun/reflect/Reflection/getCallerClass()Ljava/lang/Class;", reflect.ReflectionGetCallerClassV)
+	vm.RegisterNativeMethod("sun/reflect/Reflection/getClassAccessFlags(Ljava/lang/Class;)I", reflect.ReflectionGetClassAccessFlags)
 
 	vm.RegisterNativeMethod("sun/misc/VM/initialize()V", nop)
 }

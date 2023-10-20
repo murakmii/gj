@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/murakmii/gj"
 	"sync"
-	"unicode/utf16"
 )
 
 type VM struct {
@@ -36,18 +35,18 @@ func InitVM(config *gj.Config) (*VM, error) {
 		return nil, err
 	}
 
-	classes, err := vm.initializeClasses([]string{
-		"java/lang/String",
-		"java/lang/System",
-		"java/lang/Class",
-		"java/lang/ThreadGroup",
-	})
+	classes, err := vm.initializeClasses([]string{"java/lang/String", "java/lang/System", "java/lang/Class"})
 	if err != nil {
 		return nil, err
 	}
 
 	vm.jlString = classes[0]
 	vm.jlClass = classes[2]
+
+	_, err = vm.initializeClasses([]string{"java/lang/ThreadGroup", "java/lang/Thread"})
+	if err != nil {
+		return nil, err
+	}
 
 	if err = vm.initializeMainThread(); err != nil {
 		return nil, err
@@ -120,26 +119,7 @@ func (vm *VM) JavaString(thread *Thread, s *string) (*Instance, error) {
 		return cache, nil
 	}
 
-	className := "java/lang/String"
-	class, state, err := vm.FindInitializedClass(&className, thread)
-	if err != nil {
-		return nil, err
-	}
-	if state == FailedInitialization {
-		return nil, fmt.Errorf("failed initialization for %s", className)
-	}
-
-	js := NewInstance(class)
-
-	u16 := utf16.Encode([]rune(*s))
-	charArray := NewArray("C", len(u16))
-	for i, e := range u16 {
-		charArray.Set(i, int(e))
-	}
-
-	fieldName := "value"
-	js.PutField(&className, &fieldName, charArray)
-
+	js := GoString(*s).ToJavaString(thread)
 	vm.javaStringCache[*s] = js
 	return js, nil
 }
@@ -207,7 +187,8 @@ func (vm *VM) initializeMainThread() error {
 
 	mainJThread := NewInstance(tClass)
 	threadPriorityField := "priority"
-	mainJThread.PutField(&tClassName, &threadPriorityField, 5)
+	threadPriorityFieldDesc := "I"
+	mainJThread.PutField(&threadPriorityField, &threadPriorityFieldDesc, 5)
 	vm.mainThread.SetJavaThread(mainJThread)
 
 	frame = NewFrame(tClass, tClass.File().FindMethod("<init>", "(Ljava/lang/ThreadGroup;Ljava/lang/String;)V")).
