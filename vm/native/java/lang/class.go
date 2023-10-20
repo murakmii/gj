@@ -5,7 +5,6 @@ import (
 	"github.com/murakmii/gj/class_file"
 	"github.com/murakmii/gj/vm"
 	"strings"
-	"unicode/utf16"
 )
 
 func ClassDesiredAssertionStatus0(thread *vm.Thread, args []interface{}) error {
@@ -21,46 +20,61 @@ func ClassGetPrimitiveClass(thread *vm.Thread, _ []interface{}) error {
 	return nil
 }
 
-func ClassGetName0(thread *vm.Thread, args []interface{}) error {
-	switch javaClass := args[0].(type) {
-	case *vm.Instance:
-		name := strings.ReplaceAll(*javaClass.VMData().(*string), "/", ".")
-		nameJS, err := thread.VM().JavaString(thread, &name)
-		if err != nil {
-			return err
-		}
-		thread.CurrentFrame().PushOperand(nameJS)
+func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
+	thisName := args[0].(*vm.Instance).VMData().(*string)
+	argName := args[1].(*vm.Instance).VMData().(*string)
 
-	default:
-		return fmt.Errorf("Clas.getName0 does NOT support object is NOT instance")
+	if (*thisName)[0] != 'L' || (*argName)[0] != 'L' {
+		thread.CurrentFrame().PushOperand(0)
+		return nil
 	}
 
+	argClass, err := thread.VM().FindClass(argName)
+	if err != nil {
+		return err
+	}
+
+	result := 0
+	if argClass.IsSubClassOf(thisName) || argClass.Implements(thisName) {
+		result = 1
+	}
+
+	thread.CurrentFrame().PushOperand(result)
+	return nil
+}
+
+func ClassIsPrimitive(thread *vm.Thread, args []interface{}) error {
+	className := *(args[0].(*vm.Instance).VMData().(*string))
+
+	result := 0
+	if className[0] != 'L' && className[0] != '[' {
+		result = 1
+	}
+
+	thread.CurrentFrame().PushOperand(result)
+	return nil
+}
+
+func ClassGetName0(thread *vm.Thread, args []interface{}) error {
+	javaClass := args[0].(*vm.Instance)
+
+	name := strings.ReplaceAll(*javaClass.VMData().(*string), "/", ".")
+	if name[0] == 'L' {
+		name = name[1 : len(name)-1]
+	}
+
+	nameJS, err := thread.VM().JavaString(thread, &name)
+	if err != nil {
+		return err
+	}
+
+	thread.CurrentFrame().PushOperand(nameJS)
 	return nil
 }
 
 func ClassForName0(thread *vm.Thread, args []interface{}) error {
-	nameJS := args[0].(*vm.Instance)
-
-	valueName := "value"
-	valueDesc := "[C"
-	valueArray := nameJS.GetField(&valueName, &valueDesc).(*vm.Array)
-
-	u16 := make([]uint16, valueArray.Length())
-	for i := 0; i < valueArray.Length(); i++ {
-		u16[i] = uint16((valueArray.Get(i)).(int))
-	}
-	nameGS := strings.ReplaceAll(string(utf16.Decode(u16)), ".", "/")
-
-	className := "java/lang/Class"
-	class, state, err := thread.VM().FindInitializedClass(&className, thread)
-	if err != nil {
-		return err
-	}
-	if state == vm.FailedInitialization {
-		return fmt.Errorf("failed initialization of class class in Class.forName0")
-	}
-
-	thread.CurrentFrame().PushOperand(vm.NewInstance(class).SetVMData(&nameGS))
+	name := vm.JavaStringToGoString(args[0].(*vm.Instance))
+	thread.CurrentFrame().PushOperand(thread.VM().JavaClass(&name))
 	return nil
 }
 
@@ -81,8 +95,7 @@ func ClassGetSuperClass(thread *vm.Thread, args []interface{}) error {
 	}
 
 	superName := class.Super().File().ThisClass()
-	thread.CurrentFrame().PushOperand(
-		vm.NewInstance(thread.VM().JavaLangClassClass()).SetVMData(&superName))
+	thread.CurrentFrame().PushOperand(thread.VM().JavaClass(&superName))
 	return nil
 }
 
@@ -135,7 +148,7 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 			fInstance,
 			class,
 			thread.VM().JavaString2(thread, f.Name()),
-			vm.NewInstance(thread.VM().JavaLangClassClass()).SetVMData(f.Desc()),
+			thread.VM().JavaClass(f.Desc()),
 			int(f.AccessFlag()),
 			f.ID(),
 			signature,

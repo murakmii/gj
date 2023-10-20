@@ -53,3 +53,18 @@ func SystemInitProperties(thread *vm.Thread, args []interface{}) error {
 	thread.CurrentFrame().PushOperand(props)
 	return nil
 }
+
+func SystemSetArg0ToField(name, desc string) vm.NativeMethodFunc {
+	return func(thread *vm.Thread, args []interface{}) error {
+		className := "java/lang/System"
+		sys, err := thread.VM().FindClass(&className)
+		if err != nil {
+			return err
+		}
+
+		_, field := sys.ResolveField(name, desc)
+		sys.SetStaticField(field, args[0])
+
+		return nil
+	}
+}

@@ -264,17 +264,7 @@ func instrLdc(idxLoader func(*Frame) uint16) Instruction {
 			frame.PushOperand(js)
 
 		case class_file.ClassCpInfo:
-			className := "java/lang/Class"
-			class, state, err := thread.VM().FindInitializedClass(&className, thread)
-			if err != nil {
-				return err
-			}
-			if state == FailedInitialization {
-				return fmt.Errorf("failed initialization of class class in LDC")
-			}
-			frame.PushOperand(NewInstance(class).SetVMData(
-				frame.CurrentClass().File().ConstantPool().Utf8(uint16(entry)),
-			))
+			frame.PushOperand(thread.VM().JavaClass(frame.CurrentClass().File().ConstantPool().Utf8(uint16(entry))))
 
 		default:
 			return fmt.Errorf("LDC unsupport %T:%+v", entry, entry)

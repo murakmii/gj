@@ -27,6 +27,8 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Class/getDeclaredFields0(Z)[Ljava/lang/reflect/Field;", lang.ClassGetDeclaredFields0)
 	vm.RegisterNativeMethod("java/lang/Class/getName0()Ljava/lang/String;", lang.ClassGetName0)
 	vm.RegisterNativeMethod("java/lang/Class/getSuperclass()Ljava/lang/Class;", lang.ClassGetSuperClass)
+	vm.RegisterNativeMethod("java/lang/Class/isAssignableFrom(Ljava/lang/Class;)Z", lang.ClassIsAssignableFrom)
+	vm.RegisterNativeMethod("java/lang/Class/isPrimitive()Z", lang.ClassIsPrimitive)
 	vm.RegisterNativeMethod("java/lang/Class/forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", lang.ClassForName0)
 	vm.RegisterNativeMethod("java/lang/Class/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/Class/getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;", lang.ClassGetPrimitiveClass)
@@ -43,6 +45,9 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/System/arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V", lang.SystemArrayCopy)
 	vm.RegisterNativeMethod("java/lang/System/initProperties(Ljava/util/Properties;)Ljava/util/Properties;", lang.SystemInitProperties)
 	vm.RegisterNativeMethod("java/lang/System/registerNatives()V", nop)
+	vm.RegisterNativeMethod("java/lang/System/setIn0(Ljava/io/InputStream;)V", lang.SystemSetArg0ToField("in", "Ljava/io/InputStream;"))
+	vm.RegisterNativeMethod("java/lang/System/setOut0(Ljava/io/PrintStream;)V", lang.SystemSetArg0ToField("out", "Ljava/io/PrintStream;"))
+	vm.RegisterNativeMethod("java/lang/System/setErr0(Ljava/io/PrintStream;)V", lang.SystemSetArg0ToField("err", "Ljava/io/PrintStream;"))
 
 	vm.RegisterNativeMethod("java/lang/String/intern()Ljava/lang/String;", lang.StringIntern)
 

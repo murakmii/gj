@@ -15,9 +15,11 @@ type VM struct {
 
 	mainThread *Thread
 
-	jlString        *Class
-	jlClass         *Class
+	jlString *Class
+	jlClass  *Class
+
 	javaStringCache map[string]*Instance
+	javaClassCache  map[string]*Instance
 }
 
 func InitVM(config *gj.Config) (*VM, error) {
@@ -27,6 +29,7 @@ func InitVM(config *gj.Config) (*VM, error) {
 		classCache:      make(map[string]*Class),
 		classLock:       &sync.Mutex{},
 		javaStringCache: make(map[string]*Instance),
+		javaClassCache:  make(map[string]*Instance),
 	}
 	vm.mainThread = NewThread(vm)
 
@@ -115,6 +118,7 @@ func (vm *VM) JavaString2(thread *Thread, s *string) *Instance {
 }
 
 func (vm *VM) JavaString(thread *Thread, s *string) (*Instance, error) {
+	// TODO: lock
 	if cache, ok := vm.javaStringCache[*s]; ok {
 		return cache, nil
 	}
@@ -122,6 +126,20 @@ func (vm *VM) JavaString(thread *Thread, s *string) (*Instance, error) {
 	js := GoString(*s).ToJavaString(thread)
 	vm.javaStringCache[*s] = js
 	return js, nil
+}
+
+func (vm *VM) JavaClass(name *string) *Instance {
+	if cache, ok := vm.javaClassCache[*name]; ok {
+		return cache
+	}
+
+	if vm.jlClass == nil {
+		panic("require java/lang/Class instance before initialization(called from java/lang/String or java/lang/System class initialization?)")
+	}
+
+	jc := NewInstance(vm.jlClass).SetVMData(name)
+	vm.javaClassCache[*name] = jc
+	return jc
 }
 
 func (vm *VM) initializeClasses(classNames []string) ([]*Class, error) {

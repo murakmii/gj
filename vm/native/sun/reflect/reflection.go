@@ -6,17 +6,8 @@ import (
 )
 
 func ReflectionGetCallerClassV(thread *vm.Thread, _ []interface{}) error {
-	className := "java/lang/Class"
-	class, state, err := thread.VM().FindInitializedClass(&className, thread)
-	if err != nil {
-		return err
-	}
-	if state == vm.FailedInitialization {
-		return fmt.Errorf("failed initialization of class class in Reflection.getCallerClass")
-	}
-
 	callerClassName := thread.InvokerFrame().CurrentClass().File().ThisClass()
-	thread.CurrentFrame().PushOperand(vm.NewInstance(class).SetVMData(&callerClassName))
+	thread.CurrentFrame().PushOperand(thread.VM().JavaClass(&callerClassName))
 	return nil
 }
 
