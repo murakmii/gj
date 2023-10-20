@@ -78,6 +78,14 @@ func (frame *Frame) NextParamUint16() uint16 {
 	return frame.code.ReadUint16()
 }
 
+func (frame *Frame) NextParamUint32() uint32 {
+	return frame.code.ReadUint32()
+}
+
+func (frame *Frame) NextAlign(align int) {
+	frame.code.SkipToAlign(align)
+}
+
 func (frame *Frame) PC() uint16 {
 	return frame.pc
 }

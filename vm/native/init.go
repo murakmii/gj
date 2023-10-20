@@ -4,6 +4,7 @@ import (
 	"github.com/murakmii/gj/vm"
 	"github.com/murakmii/gj/vm/native/java/lang"
 	"github.com/murakmii/gj/vm/native/java/security"
+	"github.com/murakmii/gj/vm/native/java/util/concurrent/atomic"
 	"github.com/murakmii/gj/vm/native/sun/misc"
 	"github.com/murakmii/gj/vm/native/sun/reflect"
 )
@@ -62,6 +63,12 @@ func init() {
 
 	vm.RegisterNativeMethod("java/lang/Throwable/fillInStackTrace(I)Ljava/lang/Throwable;", lang.ThrowableFillInStackTrace)
 
+	vm.RegisterNativeMethod("java/util/concurrent/atomic/AtomicLong/VMSupportsCS8()Z", atomic.AtomicLongVMSupportsCS8)
+
+	vm.RegisterNativeMethod("sun/misc/Unsafe/allocateMemory(J)J", misc.UnsafeAllocateMemory)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/freeMemory(J)V", misc.UnsafeFreeMemory)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/getByte(J)B", misc.UnsafeGetByteNativeMem)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/putLong(JJ)V", misc.UnsafePutLongNativeMem)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/addressSize()I", misc.UnsafeAddressSize)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayBaseOffset(Ljava/lang/Class;)I", misc.UnsafeArrayBaseOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayIndexScale(Ljava/lang/Class;)I", misc.UnsafeArrayIndexScale)

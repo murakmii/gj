@@ -87,6 +87,11 @@ func init() {
 	InstructionSet[0x3D] = instrStoreN(2)
 	InstructionSet[0x3E] = instrStoreN(3)
 
+	InstructionSet[0x3F] = instrStoreN(0)
+	InstructionSet[0x40] = instrStoreN(1)
+	InstructionSet[0x41] = instrStoreN(2)
+	InstructionSet[0x42] = instrStoreN(3)
+
 	InstructionSet[0x4B] = instrStoreN(0)
 	InstructionSet[0x4C] = instrStoreN(1)
 	InstructionSet[0x4D] = instrStoreN(2)
@@ -163,6 +168,8 @@ func init() {
 	InstructionSet[0xA6] = instrIfACmpNe
 
 	InstructionSet[0xA7] = instrGoTo
+
+	InstructionSet[0xAB] = instrLookupSwitch
 
 	InstructionSet[0xAC] = instrReturn
 	InstructionSet[0xAD] = instrReturn
@@ -583,8 +590,6 @@ func instrIfACmpNe(_ *Thread, frame *Frame) error {
 		return nil
 	}
 
-	fmt.Printf("if_acmpeq v1=%+v, v2=%+v\n", value1, value2)
-
 	v1, ok := value1.(*Instance)
 	if !ok {
 		return fmt.Errorf("popped value2 for if_acmpeq is NOT instance")
@@ -604,6 +609,26 @@ func instrIfACmpNe(_ *Thread, frame *Frame) error {
 func instrGoTo(_ *Thread, frame *Frame) error {
 	branch := int16(frame.NextParamUint16())
 	frame.JumpPC(uint16(int16(frame.PC()) + branch))
+	return nil
+}
+
+func instrLookupSwitch(_ *Thread, frame *Frame) error {
+	frame.NextAlign(4)
+
+	defaultVal := frame.NextParamUint32()
+	key := frame.PopOperand().(int)
+
+	for npairs := frame.NextParamUint32(); npairs > 0; npairs-- {
+		match := int(frame.NextParamUint32())
+		offset := int(frame.NextParamUint32())
+
+		if match == key {
+			frame.JumpPC(frame.PC() + uint16(offset))
+			return nil
+		}
+	}
+
+	frame.JumpPC(frame.PC() + uint16(defaultVal))
 	return nil
 }
 

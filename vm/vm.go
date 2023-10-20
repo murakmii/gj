@@ -20,6 +20,8 @@ type VM struct {
 
 	javaStringCache map[string]*Instance
 	javaClassCache  map[string]*Instance
+
+	nativeMem *NativeMemAllocator
 }
 
 func InitVM(config *gj.Config) (*VM, error) {
@@ -30,6 +32,7 @@ func InitVM(config *gj.Config) (*VM, error) {
 		classLock:       &sync.Mutex{},
 		javaStringCache: make(map[string]*Instance),
 		javaClassCache:  make(map[string]*Instance),
+		nativeMem:       CreateNativeMemAllocator(),
 	}
 	vm.mainThread = NewThread(vm)
 
@@ -83,6 +86,10 @@ func (vm *VM) FindClass(name *string) (*Class, error) {
 	}
 
 	return nil, fmt.Errorf("class '%s' not found", *name)
+}
+
+func (vm *VM) NativeMem() *NativeMemAllocator {
+	return vm.nativeMem
 }
 
 func (vm *VM) SysProps() map[string]string {

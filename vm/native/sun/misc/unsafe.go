@@ -1,10 +1,35 @@
 package misc
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/murakmii/gj/vm"
 	"unsafe"
 )
+
+func UnsafeAllocateMemory(thread *vm.Thread, args []interface{}) error {
+	thread.CurrentFrame().PushOperand(thread.VM().NativeMem().Alloc(args[1].(int64)))
+	return nil
+}
+
+func UnsafeFreeMemory(thread *vm.Thread, args []interface{}) error {
+	thread.VM().NativeMem().Free(args[1].(int64))
+	return nil
+}
+
+func UnsafePutLongNativeMem(thread *vm.Thread, args []interface{}) error {
+	binary.BigEndian.PutUint64(
+		thread.VM().NativeMem().Ref(args[1].(int64)),
+		uint64(args[2].(int64)),
+	)
+	return nil
+}
+
+func UnsafeGetByteNativeMem(thread *vm.Thread, args []interface{}) error {
+	thread.CurrentFrame().PushOperand(
+		int(thread.VM().NativeMem().Ref(args[1].(int64))[0]))
+	return nil
+}
 
 func UnsafeAddressSize(thread *vm.Thread, _ []interface{}) error {
 	thread.CurrentFrame().PushOperand(int(unsafe.Sizeof(uintptr(0))))
