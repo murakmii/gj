@@ -583,6 +583,8 @@ func instrIfACmpNe(_ *Thread, frame *Frame) error {
 		return nil
 	}
 
+	fmt.Printf("if_acmpeq v1=%+v, v2=%+v\n", value1, value2)
+
 	v1, ok := value1.(*Instance)
 	if !ok {
 		return fmt.Errorf("popped value2 for if_acmpeq is NOT instance")
@@ -677,17 +679,26 @@ func instrPutField(_ *Thread, frame *Frame) error {
 
 func instrInvokeVirtual(thread *Thread, frame *Frame) error {
 	_, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
-	instance := frame.PeekFromTop(class_file.ParseDescriptor(desc)).(*Instance)
-	if instance == nil {
-		return fmt.Errorf("receiver instance is null")
-	}
 
-	resolvedClass, resolvedMethod := instance.Class().ResolveMethod(*name, *desc)
-	if resolvedClass == nil || !resolvedMethod.IsCallableForInstance() {
-		return fmt.Errorf("method not found: %s.%s", *name, *desc)
-	}
+	switch i := frame.PeekFromTop(class_file.ParseDescriptor(desc)).(type) {
+	case *Instance:
+		resolvedClass, resolvedMethod := i.Class().ResolveMethod(*name, *desc)
+		if resolvedClass == nil || !resolvedMethod.IsCallableForInstance() {
+			return fmt.Errorf("method not found: %s.%s", *name, *desc)
+		}
+		return thread.ExecMethod(resolvedClass, resolvedMethod)
 
-	return thread.ExecMethod(resolvedClass, resolvedMethod)
+	case *Array:
+		if *name == "clone" {
+			thread.CurrentFrame().PushOperand(i.Clone())
+		} else {
+			return fmt.Errorf("invokevirtual: call '%s' for array", *name)
+		}
+		return nil
+
+	default:
+		return fmt.Errorf("invokevirtual: receiver is invalid object: %+v", i)
+	}
 }
 
 func instrInvokeSpecial(thread *Thread, frame *Frame) error {

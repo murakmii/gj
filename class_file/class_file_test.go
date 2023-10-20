@@ -1,6 +1,8 @@
 package class_file
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestMethodInfo_NumArgs(t *testing.T) {
 	tests := []struct {

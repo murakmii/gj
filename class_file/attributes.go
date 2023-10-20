@@ -29,6 +29,10 @@ type (
 	RuntimeVisibleAnnotationsAttr struct {
 		rawBytes []byte
 	}
+
+	RuntimeVisibleParameterAnnotationsAttr struct {
+		rawBytes []byte
+	}
 )
 
 const (
@@ -104,7 +108,9 @@ func readAttribute(r *util.BinReader, cp *ConstantPool) interface{} {
 	case runtimeVisibleAnnotationsAttr:
 		return &RuntimeVisibleAnnotationsAttr{rawBytes: r.ReadBytes(int(size))}
 
-	//case runtimeVisibleParameterAnnotationsAttr:
+	case runtimeVisibleParameterAnnotationsAttr:
+		return &RuntimeVisibleParameterAnnotationsAttr{rawBytes: r.ReadBytes(int(size))}
+
 	//case runtimeVisibleTypeAnnotationsAttr:
 	case signatureAttr:
 		return SignatureAttr(r.ReadUint16())
@@ -176,5 +182,9 @@ func (e *ExceptionTable) CatchType() uint16 {
 }
 
 func (anno *RuntimeVisibleAnnotationsAttr) RawBytes() []byte {
+	return anno.rawBytes
+}
+
+func (anno *RuntimeVisibleParameterAnnotationsAttr) RawBytes() []byte {
 	return anno.rawBytes
 }

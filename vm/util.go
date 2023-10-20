@@ -22,6 +22,14 @@ func (s GoString) ToJavaString(thread *Thread) *Instance {
 	return js
 }
 
+func ByteSliceToJavaArray(bytes []byte) *Array {
+	array := NewArray("B", len(bytes))
+	for i, b := range bytes {
+		array.Set(i, b)
+	}
+	return array
+}
+
 func JavaStringToGoString(instance *Instance) string {
 	value := "value"
 	valueDesc := "[C"

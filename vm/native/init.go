@@ -24,7 +24,9 @@ func init() {
 	vm.RegisterNativeMethod("java/io/FileOutputStream/initIDs()V", nop)
 
 	vm.RegisterNativeMethod("java/lang/Class/desiredAssertionStatus0(Ljava/lang/Class;)Z", lang.ClassDesiredAssertionStatus0)
+	vm.RegisterNativeMethod("java/lang/Class/getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;", lang.ClassGetDeclaredConstructors)
 	vm.RegisterNativeMethod("java/lang/Class/getDeclaredFields0(Z)[Ljava/lang/reflect/Field;", lang.ClassGetDeclaredFields0)
+	vm.RegisterNativeMethod("java/lang/Class/getModifiers()I", lang.ClassGetModifiers)
 	vm.RegisterNativeMethod("java/lang/Class/getName0()Ljava/lang/String;", lang.ClassGetName0)
 	vm.RegisterNativeMethod("java/lang/Class/getSuperclass()Ljava/lang/Class;", lang.ClassGetSuperClass)
 	vm.RegisterNativeMethod("java/lang/Class/isAssignableFrom(Ljava/lang/Class;)Z", lang.ClassIsAssignableFrom)

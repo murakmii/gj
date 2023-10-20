@@ -23,3 +23,13 @@ func (array *Array) Set(i int, value interface{}) {
 func (array *Array) Get(i int) interface{} {
 	return array.elem[i]
 }
+
+func (array *Array) Clone() *Array {
+	cloned := make([]interface{}, len(array.elem))
+	copy(cloned, array.elem)
+
+	return &Array{
+		elem:       cloned,
+		descOfElem: array.descOfElem,
+	}
+}

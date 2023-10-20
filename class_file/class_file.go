@@ -38,6 +38,8 @@ type (
 		desc       *string
 		attributes []interface{}
 	}
+
+	JavaTypeSignature string
 )
 
 const magicNumber = 0xCAFEBABE
@@ -194,6 +196,10 @@ func (c *ClassFile) FindFieldByIndex(index int) *FieldInfo {
 	return c.fields[index]
 }
 
+func (c *ClassFile) AllMethods() []*MethodInfo {
+	return c.methods
+}
+
 func (c *ClassFile) FindMethod(name, desc string) *MethodInfo {
 	for _, method := range c.methods {
 		if *method.name == name && *method.desc == desc {
@@ -222,6 +228,39 @@ func ParseDescriptor(descriptor *string) int {
 	}
 }
 
+func ParseDescriptor2(desc []byte) []string {
+	var paramClasses []string
+
+	for len(desc) > 0 {
+		switch desc[0] {
+		case '(':
+			desc = desc[1:]
+
+		case ')':
+			desc = nil
+
+		case 'L':
+			sc := bytes.IndexByte(desc, ';')
+			paramClasses = append(paramClasses, string(desc[1:sc]))
+			desc = desc[sc+1:]
+
+		case '[':
+			ret := ParseDescriptor2(desc[1:])
+			ret[0] = "[" + ret[0]
+			for _, r := range ret {
+				paramClasses = append(paramClasses, r)
+			}
+			desc = nil
+
+		default:
+			paramClasses = append(paramClasses, string(desc[0]))
+			desc = desc[1:]
+		}
+	}
+
+	return paramClasses
+}
+
 func (m *MethodInfo) IsCallableForInstance() bool {
 	return !m.accessFlag.Contain(StaticFlag) && !m.accessFlag.Contain(AbstractFlag)
 }
@@ -242,6 +281,14 @@ func (m *MethodInfo) IsNative() bool {
 	return m.accessFlag.Contain(NativeFlag)
 }
 
+func (m *MethodInfo) IsPublic() bool {
+	return m.accessFlag.Contain(PublicFlag)
+}
+
+func (m *MethodInfo) AccessFlag() AccessFlag {
+	return m.accessFlag
+}
+
 func (m *MethodInfo) Code() *CodeAttr {
 	for _, attr := range m.attributes {
 		if code, ok := attr.(*CodeAttr); ok {
@@ -257,6 +304,43 @@ func (m *MethodInfo) NumArgs() int {
 		n++
 	}
 	return n
+}
+
+func (m *MethodInfo) Signature() (SignatureAttr, bool) {
+	for _, attr := range m.attributes {
+		if sigAttr, ok := attr.(SignatureAttr); ok {
+			return sigAttr, true
+		}
+	}
+
+	return 0, false
+}
+
+func (m *MethodInfo) RawAnnotations() []byte {
+	for _, attr := range m.attributes {
+		if annoAttr, ok := attr.(RuntimeVisibleAnnotationsAttr); ok {
+			return annoAttr.RawBytes()
+		}
+	}
+	return nil
+}
+
+func (m *MethodInfo) RawParamAnnotations() []byte {
+	for _, attr := range m.attributes {
+		if annoAttr, ok := attr.(RuntimeVisibleParameterAnnotationsAttr); ok {
+			return annoAttr.RawBytes()
+		}
+	}
+	return nil
+}
+
+func (m *MethodInfo) Exceptions() []uint16 {
+	for _, attr := range m.attributes {
+		if exceptionAttr, ok := attr.(ExceptionsAttr); ok {
+			return exceptionAttr
+		}
+	}
+	return nil
 }
 
 func (f *FieldInfo) ID() int {
@@ -310,12 +394,27 @@ func (f *FieldInfo) RawAnnotations() []byte {
 }
 
 func (f *FieldInfo) NullableDefaultValue() bool {
-	d := (*f.desc)[0]
-	return d == 'L' || d == '['
+	return JavaTypeSignature(*f.desc).IsReference()
 }
 
 func (f *FieldInfo) DefaultValue() interface{} {
-	switch (*f.desc)[0] {
+	return JavaTypeSignature(*f.desc).DefaultValue()
+}
+
+func (s JavaTypeSignature) IsPrimitive() bool {
+	return len(s) == 1 && !s.IsReference()
+}
+
+func (s JavaTypeSignature) IsReference() bool {
+	return s[0] == 'L' || s.IsArray()
+}
+
+func (s JavaTypeSignature) IsArray() bool {
+	return s[0] == '['
+}
+
+func (s JavaTypeSignature) DefaultValue() interface{} {
+	switch s[0] {
 	case 'B', 'C', 'I', 'S', 'Z':
 		return 0
 	case 'F':
