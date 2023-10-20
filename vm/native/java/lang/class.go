@@ -212,7 +212,7 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 			pArray,
 			eArray,
 			int(c.AccessFlag()),
-			0,
+			c.ID(),
 			signature,
 			vm.ByteSliceToJavaArray(c.RawAnnotations()),
 			vm.ByteSliceToJavaArray(c.RawParamAnnotations()),

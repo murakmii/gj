@@ -27,12 +27,10 @@ type (
 	}
 
 	MethodInfo reference
-	FieldInfo  struct {
-		*reference
-		id int
-	}
+	FieldInfo  reference
 
 	reference struct {
+		id         int
 		accessFlag AccessFlag
 		name       *string
 		desc       *string
@@ -82,8 +80,7 @@ func readClassFile(cfReader io.Reader) (*ClassFile, error) {
 	class.numIFields = 0
 
 	sFieldID := 0
-	for _, r := range readReference[reference](r, class.cp) {
-		f := &FieldInfo{reference: r, id: -1}
+	for _, f := range readReference[FieldInfo](r, class.cp) {
 		if !f.accessFlag.Contain(StaticFlag) {
 			class.numIFields++
 		} else {
@@ -102,7 +99,12 @@ func readClassFile(cfReader io.Reader) (*ClassFile, error) {
 			class.fields[j].accessFlag.Contain(StaticFlag)
 	})
 
-	class.methods = readReference[MethodInfo](r, class.cp)
+	class.methods = make([]*MethodInfo, 0)
+	for i, m := range readReference[MethodInfo](r, class.cp) {
+		m.SetID(i)
+		class.methods = append(class.methods, m)
+	}
+
 	class.attributes = readAttributes(r, class.cp)
 
 	return class, nil
@@ -119,12 +121,13 @@ func readInterfaces(r *util.BinReader) []uint16 {
 	return interfaces
 }
 
-func readReference[T reference | MethodInfo](r *util.BinReader, cp *ConstantPool) []*T {
+func readReference[T FieldInfo | MethodInfo](r *util.BinReader, cp *ConstantPool) []*T {
 	count := r.ReadUint16()
 	refs := make([]*T, count)
 
 	for i := uint16(0); i < count; i++ {
 		refs[i] = &T{
+			id:         -1,
 			accessFlag: AccessFlag(r.ReadUint16()),
 			name:       cp.Utf8(r.ReadUint16()),
 			desc:       cp.Utf8(r.ReadUint16()),
@@ -209,6 +212,10 @@ func (c *ClassFile) FindMethod(name, desc string) *MethodInfo {
 	return nil
 }
 
+func (c *ClassFile) FindMethodByID(id int) *MethodInfo {
+	return c.methods[id]
+}
+
 func ParseDescriptor(descriptor *string) int {
 	n := 0
 	desc := []byte(*descriptor)
@@ -267,6 +274,14 @@ func (m *MethodInfo) IsCallableForInstance() bool {
 
 func (m *MethodInfo) IsCallableAsStatic() bool {
 	return m.accessFlag.Contain(StaticFlag) && !m.accessFlag.Contain(AbstractFlag)
+}
+
+func (m *MethodInfo) SetID(id int) {
+	m.id = id
+}
+
+func (m *MethodInfo) ID() int {
+	return m.id
 }
 
 func (m *MethodInfo) Name() *string {

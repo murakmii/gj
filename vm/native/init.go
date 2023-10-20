@@ -71,6 +71,8 @@ func init() {
 	vm.RegisterNativeMethod("sun/misc/Unsafe/objectFieldOffset(Ljava/lang/reflect/Field;)J", misc.UnsafeObjectFieldOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/registerNatives()V", nop)
 
+	vm.RegisterNativeMethod("sun/reflect/NativeConstructorAccessorImpl/newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;", reflect.NativeConstructorAccessorImplNewInstance0)
+
 	vm.RegisterNativeMethod("sun/reflect/Reflection/getCallerClass()Ljava/lang/Class;", reflect.ReflectionGetCallerClassV)
 	vm.RegisterNativeMethod("sun/reflect/Reflection/getClassAccessFlags(Ljava/lang/Class;)I", reflect.ReflectionGetClassAccessFlags)
 
