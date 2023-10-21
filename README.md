@@ -6,10 +6,10 @@
 
 ```shell
 # Build gj
+git clone git@github.com:murakmii/gj.git && cd gj
 go build -o gj cmd/main.go
 
 # Compile sample code.
-git clone git@github.com:murakmii/gj.git && cd gj
 docker pull amazoncorretto:8
 
 echo 'public class HelloGj {
