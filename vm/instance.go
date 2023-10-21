@@ -13,8 +13,6 @@ type Instance struct {
 }
 
 func NewInstance(class *Class) *Instance {
-	fmt.Printf("****** create instance of %s fields: %d\n", class.File().ThisClass(), class.TotalInstanceFields())
-
 	return &Instance{
 		class:   class,
 		fields:  make([]interface{}, class.TotalInstanceFields()),

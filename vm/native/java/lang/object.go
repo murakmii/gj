@@ -25,3 +25,8 @@ func ObjectGetClass(thread *vm.Thread, args []interface{}) error {
 
 	return nil
 }
+
+func ObjectNotifyAll(thread *vm.Thread, args []interface{}) error {
+	args[0].(*vm.Instance).Monitor().NotifyAll()
+	return nil
+}

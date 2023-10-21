@@ -880,11 +880,11 @@ func instrInstanceOf(_ *Thread, frame *Frame) error {
 }
 
 func instrMonitorEnter(thread *Thread, frame *Frame) error {
-	frame.PopOperand().(*Instance).Monitor().Enter(thread)
+	frame.PopOperand().(*Instance).Monitor().Enter(thread, -1)
 	return nil
 }
 
-func instrMonitorExit(thread *Thread, frame *Frame) error {
+func instrMonitorExit(_ *Thread, frame *Frame) error {
 	frame.PopOperand().(*Instance).Monitor().Exit()
 	return nil
 }

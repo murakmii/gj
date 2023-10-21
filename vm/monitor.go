@@ -2,42 +2,91 @@ package vm
 
 import "sync"
 
-type Monitor struct {
-	cond  *sync.Cond
-	owner *Thread
-	count int
-}
+type (
+	Monitor struct {
+		m        *sync.Mutex
+		entering []chan struct{}
+		waiting  []chan struct{}
+		owner    *Thread
+		count    int
+	}
+)
 
 func NewMonitor() *Monitor {
 	return &Monitor{
-		cond:  sync.NewCond(&sync.Mutex{}),
+		m:     &sync.Mutex{},
 		owner: nil,
 		count: 0,
 	}
 }
 
-func (monitor *Monitor) Enter(thread *Thread) {
+func (mon *Monitor) Enter(thread *Thread, count int) {
 	for {
-		monitor.cond.L.Lock()
+		mon.m.Lock()
+		if mon.owner == nil || mon.owner == thread {
+			mon.owner = thread
+			if count == -1 {
+				mon.count++
+			} else {
+				mon.count = count
+			}
 
-		if monitor.count == 0 || monitor.owner == thread {
-			monitor.owner = thread
-			monitor.count++
-			monitor.cond.L.Unlock()
+			mon.m.Unlock()
 			return
 		}
 
-		monitor.cond.Wait()
+		entering := make(chan struct{})
+		mon.entering = append(mon.entering, entering)
+		mon.m.Unlock()
+
+		<-entering
 	}
 }
 
-func (monitor *Monitor) Exit() {
-	monitor.cond.L.Lock()
-	defer monitor.cond.L.Unlock()
+func (mon *Monitor) Exit() {
+	mon.m.Lock()
+	defer mon.m.Unlock()
 
-	monitor.count--
-	if monitor.count == 0 {
-		monitor.owner = nil
-		monitor.cond.Broadcast()
+	mon.count--
+	if mon.count == 0 {
+		mon.owner = nil
+		for _, w := range mon.entering {
+			close(w)
+		}
+		mon.entering = nil
 	}
+}
+
+func (mon *Monitor) Notify() {
+	mon.m.Lock()
+	defer mon.m.Unlock()
+
+	if len(mon.waiting) == 0 {
+		return
+	}
+
+	close(mon.waiting[0])
+	mon.waiting = mon.waiting[1:]
+}
+
+func (mon *Monitor) NotifyAll() {
+	mon.m.Lock()
+	defer mon.m.Unlock()
+
+	for _, n := range mon.waiting {
+		close(n)
+	}
+	mon.waiting = nil
+}
+
+func (mon *Monitor) Wait() {
+	mon.m.Lock()
+	owner := mon.owner
+	count := mon.count
+	notify := make(chan struct{})
+	mon.waiting = append(mon.waiting, notify)
+	mon.m.Unlock()
+
+	<-notify
+	mon.Enter(owner, count)
 }

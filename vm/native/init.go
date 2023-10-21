@@ -49,6 +49,7 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Object/getClass()Ljava/lang/Class;", lang.ObjectGetClass)
 	vm.RegisterNativeMethod("java/lang/Object/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/Object/hashCode()I", lang.ObjectHashCode)
+	vm.RegisterNativeMethod("java/lang/Object/notifyAll()V", lang.ObjectNotifyAll)
 
 	vm.RegisterNativeMethod("java/lang/System/arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V", lang.SystemArrayCopy)
 	vm.RegisterNativeMethod("java/lang/System/initProperties(Ljava/util/Properties;)Ljava/util/Properties;", lang.SystemInitProperties)
