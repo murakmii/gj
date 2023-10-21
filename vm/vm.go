@@ -69,6 +69,10 @@ func InitVM(config *gj.Config) (*VM, error) {
 	return vm, nil
 }
 
+func (vm *VM) MainThread() *Thread {
+	return vm.mainThread
+}
+
 func (vm *VM) FindClass(name *string) (*Class, error) {
 	vm.classLock.Lock()
 	defer vm.classLock.Unlock()
@@ -90,6 +94,10 @@ func (vm *VM) FindClass(name *string) (*Class, error) {
 	}
 
 	return nil, fmt.Errorf("class '%s' not found", *name)
+}
+
+func (vm *VM) ClassCacheNum() int {
+	return len(vm.classCache)
 }
 
 func (vm *VM) NativeMem() *NativeMemAllocator {

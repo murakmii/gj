@@ -111,25 +111,16 @@ func (thread *Thread) DumpFrameStack(showHeader bool) int {
 }
 
 func (thread *Thread) PushFrame(frame *Frame) {
-	fmt.Printf("enter new frame: %s.%s:%s\n", frame.curClass.File().ThisClass(), *frame.curMethod.Name(), *frame.curMethod.Descriptor())
-
-	if frame.CurrentClass().File().ThisClass() == "sun/reflect/Reflection" &&
-		*(frame.CurrentMethod().Name()) == "isSameClassPackage" && len(frame.Locals()) >= 4 {
-		c1 := frame.Locals()[1].(*Instance)
-		c2 := frame.Locals()[3].(*Instance)
-
-		fmt.Printf("--------------------------------- isSameClassPackage c=%s, m=%s\n", JavaStringToGoString(c1), JavaStringToGoString(c2))
-	}
-
+	//fmt.Printf("enter new frame: %s.%s:%s\n", frame.curClass.File().ThisClass(), *frame.curMethod.Name(), *frame.curMethod.Descriptor())
 	thread.frameStack = append(thread.frameStack, frame)
 }
 
 func (thread *Thread) PopFrame() {
-	fmt.Printf("leave frame: %s.%s:%s\n",
+	/*fmt.Printf("leave frame: %s.%s:%s\n",
 		thread.CurrentFrame().CurrentClass().File().ThisClass(),
 		*thread.CurrentFrame().CurrentMethod().Name(),
 		*thread.CurrentFrame().CurrentMethod().Descriptor(),
-	)
+	)*/
 
 	thread.frameStack = thread.frameStack[:len(thread.frameStack)-1]
 }

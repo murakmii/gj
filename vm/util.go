@@ -1,6 +1,8 @@
 package vm
 
-import "unicode/utf16"
+import (
+	"unicode/utf16"
+)
 
 type GoString string
 
@@ -28,6 +30,14 @@ func ByteSliceToJavaArray(bytes []byte) *Array {
 		array.Set(i, b)
 	}
 	return array
+}
+
+func JavaByteArrayToGo(array *Array, offset, size int) []byte {
+	bytes := make([]byte, size)
+	for i := 0; i < size; i++ {
+		bytes[i] = byte(array.Get(i + offset).(int))
+	}
+	return bytes
 }
 
 func JavaStringToGoString(instance *Instance) string {

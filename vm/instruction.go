@@ -143,7 +143,7 @@ func init() {
 	InstructionSet[0x86] = InstrI2F
 
 	InstructionSet[0x8B] = InstrF2I
-
+	InstructionSet[0x91] = instrI2B
 	InstructionSet[0x92] = instrI2C
 
 	InstructionSet[0x94] = instrLCmp
@@ -446,6 +446,16 @@ func InstrF2I(_ *Thread, frame *Frame) error {
 	}
 
 	frame.PushOperand(int(f))
+	return nil
+}
+
+func instrI2B(_ *Thread, frame *Frame) error {
+	i, ok := frame.PopOperand().(int)
+	if !ok {
+		return fmt.Errorf("popped value for i2b is NOT int")
+	}
+
+	frame.PushOperand(i & 0xFF)
 	return nil
 }
 
@@ -759,8 +769,6 @@ func instrInvokeStatic(thread *Thread, frame *Frame) error {
 		return fmt.Errorf("method not found: %s.%s", *name, *desc)
 	}
 
-	fmt.Printf("invoke static %s.%s:%s\n", resolvedClass.File().ThisClass(), *resolvedMethod.Name(), *resolvedMethod.Descriptor())
-
 	return thread.ExecMethod(resolvedClass, resolvedMethod)
 }
 
@@ -772,8 +780,6 @@ func instrInvokeInterface(thread *Thread, frame *Frame) error {
 	}
 
 	frame.NextParamUint16() // Skip 'count' and '0'
-
-	thread.DumpFrameStack(true)
 
 	resolvedClass, resolvedMethod := instance.Class().ResolveMethod(*name, *desc)
 	if resolvedClass == nil || !resolvedMethod.IsCallableForInstance() {
@@ -792,8 +798,6 @@ func instrNew(thread *Thread, frame *Frame) error {
 	if state == FailedInitialization {
 		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
-
-	fmt.Printf("****** new instance: %s\n", class.File().ThisClass())
 
 	frame.PushOperand(NewInstance(class))
 	return nil

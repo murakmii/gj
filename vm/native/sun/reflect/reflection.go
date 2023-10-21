@@ -1,7 +1,6 @@
 package reflect
 
 import (
-	"fmt"
 	"github.com/murakmii/gj/vm"
 )
 
@@ -13,7 +12,6 @@ func ReflectionGetCallerClassV(thread *vm.Thread, _ []interface{}) error {
 
 func ReflectionGetClassAccessFlags(thread *vm.Thread, args []interface{}) error {
 	className := args[0].(*vm.Instance).VMData().(*string)
-	fmt.Printf("get access flags for %s\n", *className)
 
 	class, err := thread.VM().FindClass(className)
 	if err != nil {

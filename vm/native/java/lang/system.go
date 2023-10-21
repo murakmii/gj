@@ -28,8 +28,6 @@ func SystemInitProperties(thread *vm.Thread, args []interface{}) error {
 	class, method := props.Class().ResolveMethod("setProperty", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;")
 
 	for k, v := range thread.VM().SysProps() {
-		fmt.Printf("set system property %s = %s\n", k, v)
-
 		kJS, err := thread.VM().JavaString(thread, &k)
 		if err != nil {
 			return fmt.Errorf("failed to instantiate string for system prorperty key")
@@ -49,7 +47,6 @@ func SystemInitProperties(thread *vm.Thread, args []interface{}) error {
 		}
 	}
 
-	fmt.Println("finish system property initialization")
 	thread.CurrentFrame().PushOperand(props)
 	return nil
 }

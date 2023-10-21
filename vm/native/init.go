@@ -2,6 +2,7 @@ package native
 
 import (
 	"github.com/murakmii/gj/vm"
+	"github.com/murakmii/gj/vm/native/java/io"
 	"github.com/murakmii/gj/vm/native/java/lang"
 	"github.com/murakmii/gj/vm/native/java/security"
 	"github.com/murakmii/gj/vm/native/java/util/concurrent/atomic"
@@ -23,6 +24,7 @@ func init() {
 	vm.RegisterNativeMethod("java/io/FileInputStream/initIDs()V", nop)
 
 	vm.RegisterNativeMethod("java/io/FileOutputStream/initIDs()V", nop)
+	vm.RegisterNativeMethod("java/io/FileOutputStream/writeBytes([BIIZ)V", io.FileOutputStreamWriteBytes)
 
 	vm.RegisterNativeMethod("java/io/UnixFileSystem/initIDs()V", nop)
 

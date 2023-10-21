@@ -8,6 +8,7 @@ import (
 	_ "github.com/murakmii/gj/vm/native"
 	"os"
 	"strings"
+	"time"
 )
 
 var (
@@ -28,7 +29,7 @@ func main() {
 		flag.Usage()
 		return
 	}
-	mainClass = strings.ReplaceAll(mainClass, ".", "/") + ".class"
+	mainClass = strings.ReplaceAll(mainClass, ".", "/")
 
 	config, err := readConfig()
 	if err != nil {
@@ -50,7 +51,7 @@ func main() {
 	if print {
 		execPrint(classPaths)
 	} else {
-		execVM(config)
+		execVM(config, mainClass)
 	}
 }
 
@@ -66,7 +67,7 @@ func readConfig() (*gj.Config, error) {
 
 func execPrint(classPaths []gj.ClassPath) {
 	for _, classPath := range classPaths {
-		classFile, err := classPath.SearchClass(mainClass)
+		classFile, err := classPath.SearchClass(mainClass + ".class")
 		if err != nil {
 			fmt.Printf("failed to search class: %s", err)
 			return
@@ -83,55 +84,34 @@ func execPrint(classPaths []gj.ClassPath) {
 	fmt.Println("class not found")
 }
 
-func execVM(config *gj.Config) {
-	_, err := vm.InitVM(config)
+func execVM(config *gj.Config, mainClassName string) {
+	start := time.Now().UnixMilli()
+	vmInstance, err := vm.InitVM(config)
 	if err != nil {
 		panic(err)
 	}
 
-	/*className := "java/lang/String"
-	javaLangString, state, err := vmInstance.FindInitializedClass(&className, vm.NewThread(vmInstance))
-	if err != nil {
-		panic(err)
-	}
-	if state == vm.FailedInitialization {
-		panic("string class initialization failed")
-	}
+	fmt.Printf("-> VM initialized!(%d ms)\n", time.Now().UnixMilli()-start)
+	fmt.Printf("-> Loaded classes: %d\n", vmInstance.ClassCacheNum())
+	fmt.Printf("-> Execute main method...\n")
+	fmt.Println("--------------------------------------")
 
-	className = "java/lang/Class"
-	_, state, err = vmInstance.FindInitializedClass(&className, vm.NewThread(vmInstance))
+	mainClass, state, err := vmInstance.FindInitializedClass(&mainClassName, vmInstance.MainThread())
 	if err != nil {
 		panic(err)
 	}
 	if state == vm.FailedInitialization {
-		panic("class class initialization failed")
+		panic(fmt.Sprintf("failed class initialization: %s", mainClassName))
 	}
 
-	fmt.Println("succeeded string class initialization")
+	_, mainMethod := mainClass.ResolveMethod("main", "([Ljava/lang/String;)V")
+	thrown, err := vmInstance.MainThread().Execute(
+		vm.NewFrame(mainClass, mainMethod).SetLocals([]interface{}{vm.NewArray("Ljava/lang/String;", 0)}))
 
-	thread := vm.NewThread(vmInstance)
-
-	strA := "Hello, ワ"
-	strB := "ールド!"
-
-	jsA, _ := vmInstance.JavaString(thread, &strA)
-	jsB, _ := vmInstance.JavaString(thread, &strB)
-
-	class, method := javaLangString.ResolveMethod("concat", "(Ljava/lang/String;)Ljava/lang/String;")
-	frame := vm.NewFrame(class, method).SetLocals([]interface{}{jsA, jsB})
-
-	if _, err = thread.Execute(frame); err != nil {
+	if err != nil {
 		panic(err)
 	}
-
-	fClass := "java/lang/String"
-	fName := "value"
-	charArray := thread.GetResult().(*vm.Instance).GetField(&fClass, &fName).(*vm.Array)
-
-	u16 := make([]uint16, charArray.Length())
-	for i := 0; i < charArray.Length(); i++ {
-		u16[i] = uint16(charArray.Get(i).(int))
+	if thrown != nil {
+		panic(fmt.Sprintf("thrown exception by main class: %+v", thrown))
 	}
-
-	fmt.Printf("**** concat = %s ****\n", string(utf16.Decode(u16)))*/
 }
