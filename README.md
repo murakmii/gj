@@ -5,6 +5,10 @@
 ## Usage
 
 ```shell
+# Build gj
+go build -o gj cmd/main.go
+
+# Compile sample code.
 git clone git@github.com:murakmii/gj.git && cd gj
 docker pull amazoncorretto:8
 
@@ -15,8 +19,12 @@ echo 'public class HelloGj {
 }' > HelloGj.java
 
 docker run -v $(pwd):/gj -w /gj amazoncorretto:8 javac HelloGj.java
-go run cmd/main.go HelloGj.class
 
-go build -o gj cmd/main.go
-docker run -v $(pwd):/gj -w /gj amazoncorretto:8 ./gj --config dist/config.json --print --main HelloGj
+# Run it
+docker run -v $(pwd):/gj -w /gj amazoncorretto:8 ./gj --config dist/config.json --main HelloGj
+-> VM initialized!(59 ms)
+-> Loaded classes: 165
+-> Execute main method...
+--------------------------------------
+Hello, gj!
 ```
