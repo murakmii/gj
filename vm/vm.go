@@ -6,23 +6,26 @@ import (
 	"sync"
 )
 
-type VM struct {
-	sysProps map[string]string
+type (
+	VM struct {
+		sysProps map[string]string
 
-	classPaths []gj.ClassPath
-	classCache map[string]*Class
-	classLock  *sync.Mutex
+		classPaths []gj.ClassPath
+		classCache map[string]*Class
+		classLock  *sync.Mutex
 
-	mainThread *Thread
+		mainThread *Thread
+		executor   *ThreadExecutor
 
-	jlString *Class
-	jlClass  *Class
+		jlString *Class
+		jlClass  *Class
 
-	javaStringCache map[string]*Instance
-	javaClassCache  map[string]*Instance
+		javaStringCache map[string]*Instance
+		javaClassCache  map[string]*Instance
 
-	nativeMem *NativeMemAllocator
-}
+		nativeMem *NativeMemAllocator
+	}
+)
 
 func InitVM(config *gj.Config) (*VM, error) {
 	var err error
@@ -30,11 +33,12 @@ func InitVM(config *gj.Config) (*VM, error) {
 		sysProps:        config.SysProps,
 		classCache:      make(map[string]*Class),
 		classLock:       &sync.Mutex{},
+		executor:        NewThreadExecutor(),
 		javaStringCache: make(map[string]*Instance),
 		javaClassCache:  make(map[string]*Instance),
 		nativeMem:       CreateNativeMemAllocator(),
 	}
-	vm.mainThread = NewThread(vm)
+	vm.mainThread = NewThread(vm, "main", true, false)
 
 	vm.classPaths, err = gj.InitClassPaths(config.ClassPath)
 	if err != nil {
@@ -116,6 +120,10 @@ func (vm *VM) JavaLangClassClass() *Class {
 	return vm.jlClass
 }
 
+func (vm *VM) Executor() *ThreadExecutor {
+	return vm.executor
+}
+
 func (vm *VM) FindInitializedClass(name *string, curThread *Thread) (*Class, ClassState, error) {
 	class, err := vm.FindClass(name)
 	if err != nil {
@@ -159,6 +167,26 @@ func (vm *VM) JavaClass(name *string) *Instance {
 	jc := NewInstance(vm.jlClass).SetVMData(name)
 	vm.javaClassCache[*name] = jc
 	return jc
+}
+
+func (vm *VM) ExecMain(className string, args []string) error {
+	class, _, err := vm.FindInitializedClass(&className, vm.mainThread)
+	if err != nil {
+		return err
+	}
+
+	_, main := class.ResolveMethod("main", "([Ljava/lang/String;)V")
+	if main == nil {
+		return fmt.Errorf("main method not found in %s", className)
+	}
+
+	javaArgs := NewArray("Ljava/lang/String;", len(args))
+	for i := 0; i < javaArgs.Length(); i++ {
+		javaArgs.Set(i, GoString(args[i]).ToJavaString(vm.mainThread))
+	}
+
+	vm.executor.Start(vm.mainThread, NewFrame(class, main).SetLocal(0, javaArgs))
+	return nil
 }
 
 func (vm *VM) initializeClasses(classNames []string) ([]*Class, error) {
@@ -227,6 +255,11 @@ func (vm *VM) initializeMainThread() error {
 	threadPriorityFieldDesc := "I"
 	mainJThread.PutField(&threadPriorityField, &threadPriorityFieldDesc, 5)
 	vm.mainThread.SetJavaThread(mainJThread)
+	mainJThread.SetVMData(vm.mainThread)
+
+	statusName := "threadStatus"
+	statusDesc := "I"
+	mainJThread.PutField(&statusName, &statusDesc, 4) // RUNNABLE
 
 	frame = NewFrame(tClass, tClass.File().FindMethod("<init>", "(Ljava/lang/ThreadGroup;Ljava/lang/String;)V")).
 		SetLocals([]interface{}{mainJThread, mainTg, mainJs})

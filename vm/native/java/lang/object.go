@@ -26,7 +26,12 @@ func ObjectGetClass(thread *vm.Thread, args []interface{}) error {
 	return nil
 }
 
+func ObjectWait(thread *vm.Thread, args []interface{}) error {
+	// TODO: interrupt
+	_, err := args[0].(*vm.Instance).Monitor().Wait(thread, int(args[1].(int64)))
+	return err
+}
+
 func ObjectNotifyAll(thread *vm.Thread, args []interface{}) error {
-	args[0].(*vm.Instance).Monitor().NotifyAll()
-	return nil
+	return args[0].(*vm.Instance).Monitor().NotifyAll(thread)
 }

@@ -14,6 +14,9 @@ type Config struct {
 	SysProps  map[string]string `json:"system_properties"`
 }
 
+// Read configuration JSON from 'r'
+// Content will be evaluated as template before decoding as JSON and
+// environment variables are available in template.
 func ReadConfig(r io.Reader) (*Config, error) {
 	confTpl, err := io.ReadAll(r)
 	if err != nil {

@@ -646,8 +646,6 @@ func instrReturn(thread *Thread, frame *Frame) error {
 	thread.PopFrame()
 	if thread.CurrentFrame() != nil {
 		thread.CurrentFrame().PushOperand(frame.PopOperand())
-	} else {
-		thread.SetResult(frame.PopOperand())
 	}
 	return nil
 }
@@ -888,8 +886,8 @@ func instrMonitorEnter(thread *Thread, frame *Frame) error {
 	return nil
 }
 
-func instrMonitorExit(_ *Thread, frame *Frame) error {
-	frame.PopOperand().(*Instance).Monitor().Exit()
+func instrMonitorExit(thread *Thread, frame *Frame) error {
+	frame.PopOperand().(*Instance).Monitor().Exit(thread)
 	return nil
 }
 

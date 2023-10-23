@@ -96,22 +96,28 @@ func execVM(config *gj.Config, mainClassName string) {
 	fmt.Printf("-> Execute main method...\n")
 	fmt.Println("--------------------------------------")
 
-	mainClass, state, err := vmInstance.FindInitializedClass(&mainClassName, vmInstance.MainThread())
-	if err != nil {
+	if err := vmInstance.ExecMain(mainClass, []string{}); err != nil {
 		panic(err)
 	}
-	if state == vm.FailedInitialization {
-		panic(fmt.Sprintf("failed class initialization: %s", mainClassName))
+
+	alive := true
+	for alive {
+		select {
+		case result, ok := <-vmInstance.Executor().Wait():
+			if !ok {
+				alive = false
+				break
+			}
+
+			if result.Err != nil {
+				fmt.Printf("[VM] occurred error in thread '%s': %s\n", result.Thread.Name(), result.Err)
+			}
+			if result.UnCatchEx != nil {
+				fmt.Printf("[VM] uncatch exception in thread '%s': %+v\n", result.Thread.Name(), result.UnCatchEx)
+			}
+		}
 	}
 
-	_, mainMethod := mainClass.ResolveMethod("main", "([Ljava/lang/String;)V")
-	thrown, err := vmInstance.MainThread().Execute(
-		vm.NewFrame(mainClass, mainMethod).SetLocals([]interface{}{vm.NewArray("Ljava/lang/String;", 0)}))
-
-	if err != nil {
-		panic(err)
-	}
-	if thrown != nil {
-		panic(fmt.Sprintf("thrown exception by main class: %+v", thrown))
-	}
+	fmt.Println("--------------------------------------")
+	fmt.Println("Finished all non-daemon threads")
 }

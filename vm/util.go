@@ -39,16 +39,3 @@ func JavaByteArrayToGo(array *Array, offset, size int) []byte {
 	}
 	return bytes
 }
-
-func JavaStringToGoString(instance *Instance) string {
-	value := "value"
-	valueDesc := "[C"
-	charArray := instance.GetField(&value, &valueDesc).(*Array)
-
-	u16 := make([]uint16, charArray.Length())
-	for i := 0; i < charArray.Length(); i++ {
-		u16[i] = uint16(charArray.Get(i).(int))
-	}
-
-	return string(utf16.Decode(u16))
-}

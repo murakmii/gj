@@ -98,7 +98,7 @@ func ClassGetName0(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassForName0(thread *vm.Thread, args []interface{}) error {
-	name := strings.ReplaceAll(vm.JavaStringToGoString(args[0].(*vm.Instance)), ".", "/")
+	name := strings.ReplaceAll(args[0].(*vm.Instance).GetCharArrayField("value"), ".", "/")
 	sig := class_file.JavaTypeSignature(name)
 
 	if !sig.IsPrimitive() && !sig.IsArray() {

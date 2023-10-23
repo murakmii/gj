@@ -3,6 +3,7 @@ package lang
 import (
 	"fmt"
 	"github.com/murakmii/gj/vm"
+	"time"
 )
 
 func SystemArrayCopy(thread *vm.Thread, args []interface{}) error {
@@ -16,6 +17,11 @@ func SystemArrayCopy(thread *vm.Thread, args []interface{}) error {
 		dst.Set(dstStart+i, src.Get(srcStart+i))
 	}
 
+	return nil
+}
+
+func SystemCurrentTimeMillis(thread *vm.Thread, _ []interface{}) error {
+	thread.CurrentFrame().PushOperand(time.Now().UnixMilli())
 	return nil
 }
 

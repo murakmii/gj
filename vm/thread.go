@@ -3,21 +3,49 @@ package vm
 import (
 	"fmt"
 	"github.com/murakmii/gj/class_file"
-	"strings"
+	"sync"
 )
 
-type Thread struct {
-	vm          *VM
-	java        *Instance
-	derivedFrom *Thread
-	frameStack  []*Frame
+type (
+	Thread struct {
+		vm          *VM
+		name        string
+		main        bool
+		daemon      bool
+		java        *Instance
+		derivedFrom *Thread
+		frameStack  []*Frame
+		alive       bool
+		unCatchEx   *Instance
 
-	result    interface{}
-	unCatchEx *Instance
-}
+		interLock    *sync.Mutex
+		interrupted  bool
+		interWatcher []chan struct{}
+	}
 
-func NewThread(vm *VM) *Thread {
-	return &Thread{vm: vm, java: nil}
+	ThreadResult struct {
+		Thread    *Thread
+		Err       error
+		UnCatchEx *Instance
+	}
+
+	ThreadExecutor struct {
+		lock         *sync.Mutex
+		executingNum int
+		daemonNum    int
+		result       chan *ThreadResult
+	}
+)
+
+func NewThread(vm *VM, name string, main, daemon bool) *Thread {
+	return &Thread{
+		vm:        vm,
+		name:      name,
+		main:      main,
+		daemon:    daemon,
+		alive:     true,
+		interLock: &sync.Mutex{},
+	}
 }
 
 func (thread *Thread) JavaThread() *Instance {
@@ -35,11 +63,26 @@ func (thread *Thread) VM() *VM {
 func (thread *Thread) Derive() *Thread {
 	return &Thread{
 		vm:          thread.vm,
+		name:        thread.name,
 		java:        thread.java,
 		derivedFrom: thread,
-		frameStack:  nil,
-		unCatchEx:   nil,
 	}
+}
+
+func (thread *Thread) Name() string {
+	return thread.name
+}
+
+func (thread *Thread) SetName(name string) {
+	thread.name = name
+}
+
+func (thread *Thread) IsAlive() bool {
+	return thread.alive
+}
+
+func (thread *Thread) IsDaemon() bool {
+	return thread.daemon
 }
 
 func (thread *Thread) Equal(t *Thread) bool {
@@ -87,41 +130,11 @@ func (thread *Thread) StackTrack() []string {
 	return trace
 }
 
-func (thread *Thread) DumpFrameStack(showHeader bool) int {
-	if showHeader {
-		fmt.Println("------------ Frame stack ------------")
-	}
-
-	stackNum := 0
-	if thread.derivedFrom != nil {
-		stackNum += thread.derivedFrom.DumpFrameStack(false)
-	}
-
-	for _, f := range thread.frameStack {
-		stackNum++
-		indent := strings.Repeat("  ", stackNum)
-		fmt.Printf(indent+"%s.%s:%s\n", f.curClass.File().ThisClass(), *f.curMethod.Name(), *f.curMethod.Descriptor())
-	}
-
-	if showHeader {
-		fmt.Println("-------------------------------------")
-	}
-
-	return stackNum
-}
-
 func (thread *Thread) PushFrame(frame *Frame) {
-	//fmt.Printf("enter new frame: %s.%s:%s\n", frame.curClass.File().ThisClass(), *frame.curMethod.Name(), *frame.curMethod.Descriptor())
 	thread.frameStack = append(thread.frameStack, frame)
 }
 
 func (thread *Thread) PopFrame() {
-	/*fmt.Printf("leave frame: %s.%s:%s\n",
-		thread.CurrentFrame().CurrentClass().File().ThisClass(),
-		*thread.CurrentFrame().CurrentMethod().Name(),
-		*thread.CurrentFrame().CurrentMethod().Descriptor(),
-	)*/
-
 	thread.frameStack = thread.frameStack[:len(thread.frameStack)-1]
 }
 
@@ -137,14 +150,6 @@ func (thread *Thread) CurrentFrame() *Frame {
 		return nil
 	}
 	return thread.frameStack[len(thread.frameStack)-1]
-}
-
-func (thread *Thread) SetResult(value interface{}) {
-	thread.result = value
-}
-
-func (thread *Thread) GetResult() interface{} {
-	return thread.result
 }
 
 func (thread *Thread) HandleException(thrown *Instance) {
@@ -164,4 +169,87 @@ func (thread *Thread) HandleException(thrown *Instance) {
 
 	thread.unCatchEx = thrown
 	thread.frameStack = nil
+}
+
+func (thread *Thread) Interrupt() {
+	thread.interLock.Lock()
+	defer thread.interLock.Unlock()
+
+	for _, w := range thread.interWatcher {
+		close(w)
+	}
+
+	thread.interrupted = len(thread.interWatcher) > 0
+	thread.interWatcher = nil
+}
+
+func (thread *Thread) WatchInterruption() <-chan struct{} {
+	thread.interLock.Lock()
+	defer thread.interLock.Unlock()
+
+	watcher := make(chan struct{})
+	thread.interWatcher = append(thread.interWatcher, watcher)
+
+	return watcher
+}
+
+func (thread *Thread) UnWatchInterruption(watcher <-chan struct{}) {
+	thread.interLock.Lock()
+	defer thread.interLock.Unlock()
+
+	for i, w := range thread.interWatcher {
+		if w != watcher {
+			continue
+		}
+		thread.interWatcher = append(thread.interWatcher[:i], thread.interWatcher[i+1:]...)
+		break
+	}
+}
+
+func NewThreadExecutor() *ThreadExecutor {
+	return &ThreadExecutor{lock: &sync.Mutex{}, result: make(chan *ThreadResult)}
+}
+
+// Start goroutine to execute 'frame' on 'thread'
+func (executor *ThreadExecutor) Start(thread *Thread, frame *Frame) {
+	executor.lock.Lock()
+	defer executor.lock.Unlock()
+
+	executor.executingNum++
+	if thread.daemon {
+		executor.daemonNum++
+	}
+
+	go func() {
+		unCatch, err := thread.Execute(frame)
+		thread.alive = false
+
+		thread.JavaThread().Monitor().Enter(thread, -1)
+		thread.JavaThread().Monitor().NotifyAll(thread)
+		thread.JavaThread().Monitor().Exit(thread)
+
+		executor.lock.Lock()
+		executor.executingNum--
+		if thread.IsDaemon() {
+			executor.daemonNum--
+		}
+		done := executor.executingNum-executor.daemonNum == 0
+		executor.lock.Unlock()
+
+		executor.result <- &ThreadResult{
+			Thread:    thread,
+			Err:       err,
+			UnCatchEx: unCatch,
+		}
+
+		if done {
+			close(executor.result)
+		}
+	}()
+}
+
+// Receiving result of each thread execution.
+// If all non-daemon threads finished, channel will be closed.
+func (executor *ThreadExecutor) Wait() <-chan *ThreadResult {
+	return executor.result
 }

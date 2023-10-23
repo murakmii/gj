@@ -1,6 +1,9 @@
 package vm
 
-import "fmt"
+import (
+	"fmt"
+	"unicode/utf16"
+)
 
 type Instance struct {
 	class   *Class
@@ -99,4 +102,18 @@ func (instance *Instance) VMData() interface{} {
 func (instance *Instance) SetVMData(data interface{}) *Instance {
 	instance.vmData = data
 	return instance
+}
+
+// Utility method to get value of char array field as string.
+// e.g., 'value' field of java.lang.String, 'name' field of java.lang.Thread.
+func (instance *Instance) GetCharArrayField(name string) string {
+	desc := "[C"
+	charArray := instance.GetField(&name, &desc).(*Array)
+
+	u16 := make([]uint16, charArray.Length())
+	for i := 0; i < charArray.Length(); i++ {
+		u16[i] = uint16(charArray.Get(i).(int))
+	}
+
+	return string(utf16.Decode(u16))
 }

@@ -28,8 +28,8 @@ func TestReadConfig(t *testing.T) {
 	}{
 		{
 			name:   "parse simple config",
-			in:     "{\"class_path\":[\"foo\",\"bar\"]}",
-			expect: &Config{ClassPath: []string{"foo", "bar"}},
+			in:     "{\"class_path\":[\"foo\",\"bar\"],\"system_properties\":{\"hoge\":\"fuga\"}}",
+			expect: &Config{ClassPath: []string{"foo", "bar"}, SysProps: map[string]string{"hoge": "fuga"}},
 		},
 		{
 			name: "parse config uses env var",

@@ -51,9 +51,11 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Object/getClass()Ljava/lang/Class;", lang.ObjectGetClass)
 	vm.RegisterNativeMethod("java/lang/Object/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/Object/hashCode()I", lang.ObjectHashCode)
+	vm.RegisterNativeMethod("java/lang/Object/wait(J)V", lang.ObjectWait)
 	vm.RegisterNativeMethod("java/lang/Object/notifyAll()V", lang.ObjectNotifyAll)
 
 	vm.RegisterNativeMethod("java/lang/System/arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V", lang.SystemArrayCopy)
+	vm.RegisterNativeMethod("java/lang/System/currentTimeMillis()J", lang.SystemCurrentTimeMillis)
 	vm.RegisterNativeMethod("java/lang/System/initProperties(Ljava/util/Properties;)Ljava/util/Properties;", lang.SystemInitProperties)
 	vm.RegisterNativeMethod("java/lang/System/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/System/setIn0(Ljava/io/InputStream;)V", lang.SystemSetArg0ToField("in", "Ljava/io/InputStream;"))
@@ -64,6 +66,7 @@ func init() {
 
 	vm.RegisterNativeMethod("java/lang/Thread/currentThread()Ljava/lang/Thread;", lang.ThreadCurrentThread)
 	vm.RegisterNativeMethod("java/lang/Thread/isAlive()Z", lang.ThreadIsAlive)
+	vm.RegisterNativeMethod("java/lang/Thread/sleep(J)V", lang.ThreadSleep)
 	vm.RegisterNativeMethod("java/lang/Thread/start0()V", lang.ThreadStart0)
 	vm.RegisterNativeMethod("java/lang/Thread/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/Thread/setPriority0(I)V", nop)
