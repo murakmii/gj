@@ -15,6 +15,7 @@ type (
 		java        *Instance
 		derivedFrom *Thread
 		frameStack  []*Frame
+		syncStack   []*Instance
 		alive       bool
 		unCatchEx   *Instance
 
@@ -90,7 +91,8 @@ func (thread *Thread) Equal(t *Thread) bool {
 }
 
 func (thread *Thread) Execute(frame *Frame) (*Instance, error) {
-	thread.frameStack = append(thread.frameStack, frame)
+	thread.PushFrame(frame)
+
 	for len(thread.frameStack) > 0 {
 		curFrame := thread.frameStack[len(thread.frameStack)-1]
 
@@ -131,11 +133,31 @@ func (thread *Thread) StackTrack() []string {
 }
 
 func (thread *Thread) PushFrame(frame *Frame) {
+	var syncObj *Instance
+
+	if frame.CurrentMethod().IsSync() {
+		if frame.CurrentMethod().IsStatic() {
+			className := frame.CurrentClass().File().ThisClass()
+			syncObj = thread.VM().JavaClass(&className)
+		} else {
+			syncObj = frame.Locals()[0].(*Instance)
+		}
+		syncObj.Monitor().Enter(thread, -1)
+	}
+
 	thread.frameStack = append(thread.frameStack, frame)
+	thread.syncStack = append(thread.syncStack, syncObj)
 }
 
 func (thread *Thread) PopFrame() {
-	thread.frameStack = thread.frameStack[:len(thread.frameStack)-1]
+	idx := len(thread.frameStack) - 1
+
+	if thread.frameStack[idx].CurrentMethod().IsSync() {
+		thread.syncStack[idx].Monitor().Exit(thread)
+	}
+
+	thread.frameStack = thread.frameStack[:idx]
+	thread.syncStack = thread.syncStack[:idx]
 }
 
 func (thread *Thread) InvokerFrame() *Frame {
@@ -153,18 +175,18 @@ func (thread *Thread) CurrentFrame() *Frame {
 }
 
 func (thread *Thread) HandleException(thrown *Instance) {
-	for i := len(thread.frameStack) - 1; i >= 0; i-- {
-		frame := thread.frameStack[i]
+	for len(thread.frameStack) > 0 {
+		frame := thread.CurrentFrame()
 		handler := frame.FindCurrentExceptionHandler(thrown)
 
 		if handler != nil {
 			frame.JumpPC(*handler)
 			frame.ClearOperand()
 			frame.PushOperand(thrown)
-
-			thread.frameStack = thread.frameStack[:i+1]
 			return
 		}
+
+		thread.PopFrame()
 	}
 
 	thread.unCatchEx = thrown

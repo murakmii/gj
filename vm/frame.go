@@ -14,11 +14,7 @@ type (
 		opStack   []interface{}
 		code      *util.BinReader
 		pc        uint16
-	}
-
-	FrameResult struct {
-		OperandStack   []interface{}
-		ThrowException bool
+		syncObj   *Instance
 	}
 )
 

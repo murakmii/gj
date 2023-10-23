@@ -300,6 +300,14 @@ func (m *MethodInfo) IsPublic() bool {
 	return m.accessFlag.Contain(PublicFlag)
 }
 
+func (m *MethodInfo) IsStatic() bool {
+	return m.accessFlag.Contain(StaticFlag)
+}
+
+func (m *MethodInfo) IsSync() bool {
+	return m.accessFlag.Contain(SynchronizedFlag)
+}
+
 func (m *MethodInfo) AccessFlag() AccessFlag {
 	return m.accessFlag
 }
