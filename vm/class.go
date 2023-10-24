@@ -10,6 +10,7 @@ import (
 type (
 	Class struct {
 		file         *class_file.ClassFile
+		java         *Instance
 		fields       []interface{}
 		totalIFields int
 		state        ClassState
@@ -45,6 +46,41 @@ func NewClass(file *class_file.ClassFile) *Class {
 	}
 }
 
+func NewArrayClass(vm *VM, desc string) *Class {
+	array := &Class{
+		file:         class_file.CreateArrayClassFile(desc),
+		fields:       nil,
+		totalIFields: 0,
+		state:        Initialized,
+		super:        vm.StdClass(JavaLangObject),
+	}
+
+	if vm.StdClass(JavaLangClass) != nil {
+		array.InitJava(vm)
+	}
+
+	return array
+}
+
+func NewPrimitiveClass(vm *VM, desc string) *Class {
+	prim := &Class{
+		file:         class_file.CreatePrimitiveClassFile(desc),
+		fields:       nil,
+		totalIFields: 0,
+		state:        Initialized,
+	}
+
+	if vm.StdClass(JavaLangClass) != nil {
+		prim.InitJava(vm)
+	}
+
+	return prim
+}
+
+func (class *Class) State() ClassState {
+	return class.state
+}
+
 func (class *Class) File() *class_file.ClassFile {
 	return class.file
 }
@@ -59,6 +95,10 @@ func (class *Class) IsSubClassOf(className *string) bool {
 
 func (class *Class) IsInstanceOf(className *string) bool {
 	return class.IsSubClassOf(className) || class.Implements(className)
+}
+
+func (class *Class) IsArray() bool {
+	return class.file.ThisClass()[0] == '['
 }
 
 func (class *Class) Implements(ifName *string) bool {
@@ -134,10 +174,20 @@ func (class *Class) ResolveMethod(name, desc string) (*Class, *class_file.Method
 // This method implements initialization process of JVM spec
 // See: https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.5
 func (class *Class) Initialize(curThread *Thread) (ClassState, error) {
+	if class.state == Initialized || class.state == FailedInitialization {
+		return class.state, nil
+	}
+
 	class.initCond.L.Lock()
 
 	switch class.state {
 	case NotInitialized:
+		// Initialize java/lang/Class instance for this class.
+		// In VM initialization phase, java.lang.Class is not loaded yet.
+		if curThread.VM().StdClass(JavaLangClass) != nil {
+			class.InitJava(curThread.VM())
+		}
+
 		class.state = Initializing
 		class.initBy = curThread
 		class.initCond.L.Unlock()
@@ -160,6 +210,20 @@ func (class *Class) Initialize(curThread *Thread) (ClassState, error) {
 		class.initCond.L.Unlock()
 		return class.state, nil
 	}
+}
+
+func (class *Class) Java() *Instance {
+	return class.java
+}
+
+func (class *Class) SetJava(instance *Instance) *Class {
+	class.java = instance
+	return class
+}
+
+func (class *Class) InitJava(vm *VM) {
+	name := class.file.ThisClass()
+	class.java = NewInstance(vm.StdClass(JavaLangClass)).SetVMData(&name)
 }
 
 func (class *Class) initialize(curThread *Thread) error {
@@ -197,8 +261,8 @@ func (class *Class) initialize(curThread *Thread) error {
 
 	// Initialize super class
 	if class.file.SuperClass() != nil {
-		class.super, state, err = curThread.VM().FindInitializedClass(class.file.SuperClass(), curThread)
-		if err != nil || state == FailedInitialization {
+		class.super, err = curThread.VM().Class(*class.file.SuperClass(), curThread)
+		if err != nil {
 			return err
 		}
 	}
@@ -206,8 +270,8 @@ func (class *Class) initialize(curThread *Thread) error {
 	// Initialize interfaces
 	var ifClass *Class
 	for _, ifName := range class.file.Interfaces() {
-		ifClass, state, err = curThread.VM().FindInitializedClass(ifName, curThread)
-		if err != nil || state == FailedInitialization {
+		ifClass, err = curThread.VM().Class(*ifName, curThread)
+		if err != nil {
 			return err
 		}
 		class.interfaces = append(class.interfaces, ifClass)
@@ -251,7 +315,7 @@ func (class *Class) initializeFieldID(vm *VM) (int, error) {
 
 	id := 0
 	if class.file.SuperClass() != nil {
-		super, err := vm.FindClass(class.file.SuperClass())
+		super, err := vm.Class(*class.file.SuperClass(), nil)
 		if err != nil {
 			return -1, err
 		}

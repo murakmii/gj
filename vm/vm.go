@@ -12,19 +12,24 @@ type (
 
 		classPaths []gj.ClassPath
 		classCache map[string]*Class
+		stdClass   []*Class
 		classLock  *sync.Mutex
 
 		mainThread *Thread
 		executor   *ThreadExecutor
 
-		jlString *Class
-		jlClass  *Class
-
 		javaStringCache map[string]*Instance
-		javaClassCache  map[string]*Instance
 
 		nativeMem *NativeMemAllocator
 	}
+
+	StdClassName int
+)
+
+const (
+	JavaLangString StdClassName = iota
+	JavaLangClass
+	JavaLangObject
 )
 
 func InitVM(config *gj.Config) (*VM, error) {
@@ -32,10 +37,10 @@ func InitVM(config *gj.Config) (*VM, error) {
 	vm := &VM{
 		sysProps:        config.SysProps,
 		classCache:      make(map[string]*Class),
+		stdClass:        make([]*Class, 3),
 		classLock:       &sync.Mutex{},
 		executor:        NewThreadExecutor(),
 		javaStringCache: make(map[string]*Instance),
-		javaClassCache:  make(map[string]*Instance),
 		nativeMem:       CreateNativeMemAllocator(),
 	}
 	vm.mainThread = NewThread(vm, "main", true, false)
@@ -45,16 +50,21 @@ func InitVM(config *gj.Config) (*VM, error) {
 		return nil, err
 	}
 
-	classes, err := vm.initializeClasses([]string{"java/lang/String", "java/lang/System", "java/lang/Class"})
+	classes, err := vm.initializeClasses([]string{JavaLangObject.String(), JavaLangString.String(), "java/lang/System", JavaLangClass.String()})
 	if err != nil {
 		return nil, err
 	}
 
-	vm.jlString = classes[0]
-	vm.jlClass = classes[2]
+	vm.stdClass[JavaLangObject] = classes[0]
+	vm.stdClass[JavaLangString] = classes[1]
+	vm.stdClass[JavaLangClass] = classes[3]
+
+	for _, class := range vm.classCache {
+		class.InitJava(vm)
+	}
 
 	// Disable native library loading. Return(0xB1) immediately
-	classes[1].File().FindMethod("loadLibrary", "(Ljava/lang/String;)V").
+	classes[2].File().FindMethod("loadLibrary", "(Ljava/lang/String;)V").
 		Code().OverrideCode([]byte{0xB1})
 
 	_, err = vm.initializeClasses([]string{"java/lang/ThreadGroup", "java/lang/Thread"})
@@ -73,33 +83,6 @@ func InitVM(config *gj.Config) (*VM, error) {
 	return vm, nil
 }
 
-func (vm *VM) MainThread() *Thread {
-	return vm.mainThread
-}
-
-func (vm *VM) FindClass(name *string) (*Class, error) {
-	vm.classLock.Lock()
-	defer vm.classLock.Unlock()
-
-	if class, ok := vm.classCache[*name]; ok {
-		return class, nil
-	}
-
-	for _, classPath := range vm.classPaths {
-		file, err := classPath.SearchClass(*name + ".class")
-		if err != nil {
-			return nil, err
-		}
-
-		if file != nil {
-			vm.classCache[*name] = NewClass(file)
-			return vm.classCache[*name], nil
-		}
-	}
-
-	return nil, fmt.Errorf("class '%s' not found", *name)
-}
-
 func (vm *VM) ClassCacheNum() int {
 	return len(vm.classCache)
 }
@@ -112,26 +95,70 @@ func (vm *VM) SysProps() map[string]string {
 	return vm.sysProps
 }
 
-func (vm *VM) JavaLangStringClass() *Class {
-	return vm.jlString
-}
-
-func (vm *VM) JavaLangClassClass() *Class {
-	return vm.jlClass
+func (vm *VM) StdClass(name StdClassName) *Class {
+	return vm.stdClass[name]
 }
 
 func (vm *VM) Executor() *ThreadExecutor {
 	return vm.executor
 }
 
-func (vm *VM) FindInitializedClass(name *string, curThread *Thread) (*Class, ClassState, error) {
-	class, err := vm.FindClass(name)
-	if err != nil {
-		return nil, NotInitialized, err
+func (vm *VM) Class(className string, thread *Thread) (*Class, error) {
+	class, ok := vm.classCache[className]
+	if ok {
+		if thread != nil {
+			state, err := class.Initialize(thread)
+			if err != nil {
+				return nil, fmt.Errorf("failed to initialize class '%s': %w", className, err)
+			}
+			if state == FailedInitialization {
+				// TODO: return JavaError
+				panic("failed to initialize class: " + className)
+			}
+		}
+
+		return class, nil
 	}
 
-	state, err := class.Initialize(curThread)
-	return class, state, err
+	vm.classLock.Lock()
+	if className[0] == '[' {
+		class = NewArrayClass(vm, className)
+
+	} else if className == "byte" || className == "char" || className == "double" || className == "float" ||
+		className == "int" || className == "long" || className == "short" || className == "boolean" {
+		class = NewPrimitiveClass(vm, className)
+
+	} else {
+		for _, classPath := range vm.classPaths {
+			classFile, err := classPath.SearchClass(className + ".class")
+			if err != nil {
+				return nil, err
+			}
+			if classFile != nil {
+				class = NewClass(classFile)
+			}
+		}
+
+		if class == nil {
+			return nil, fmt.Errorf("class '%s' not found", className)
+		}
+	}
+
+	vm.classCache[className] = class
+	vm.classLock.Unlock()
+
+	if thread != nil && class.State() == NotInitialized {
+		state, err := class.Initialize(thread)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize class '%s': %w", className, err)
+		}
+		if state == FailedInitialization {
+			// TODO: return JavaError
+			panic("failed to initialize class: " + className)
+		}
+	}
+
+	return class, nil
 }
 
 func (vm *VM) JavaString2(thread *Thread, s *string) *Instance {
@@ -155,22 +182,8 @@ func (vm *VM) JavaString(thread *Thread, s *string) (*Instance, error) {
 	return js, nil
 }
 
-func (vm *VM) JavaClass(name *string) *Instance {
-	if cache, ok := vm.javaClassCache[*name]; ok {
-		return cache
-	}
-
-	if vm.jlClass == nil {
-		panic("require java/lang/Class instance before initialization(called from java/lang/String or java/lang/System class initialization?)")
-	}
-
-	jc := NewInstance(vm.jlClass).SetVMData(name)
-	vm.javaClassCache[*name] = jc
-	return jc
-}
-
 func (vm *VM) ExecMain(className string, args []string) error {
-	class, _, err := vm.FindInitializedClass(&className, vm.mainThread)
+	class, err := vm.Class(className, vm.mainThread)
 	if err != nil {
 		return err
 	}
@@ -180,27 +193,23 @@ func (vm *VM) ExecMain(className string, args []string) error {
 		return fmt.Errorf("main method not found in %s", className)
 	}
 
-	javaArgs := NewArray("Ljava/lang/String;", len(args))
-	for i := 0; i < javaArgs.Length(); i++ {
-		javaArgs.Set(i, GoString(args[i]).ToJavaString(vm.mainThread))
+	array, slice := NewArray(vm, "[Ljava/lang/String;", len(args))
+	for i := range slice {
+		slice[i] = GoString(args[i]).ToJavaString(vm.mainThread)
 	}
 
-	vm.executor.Start(vm.mainThread, NewFrame(class, main).SetLocal(0, javaArgs))
+	vm.executor.Start(vm.mainThread, NewFrame(class, main).SetLocal(0, array))
 	return nil
 }
 
 func (vm *VM) initializeClasses(classNames []string) ([]*Class, error) {
 	classes := make([]*Class, len(classNames))
 	var err error
-	var state ClassState
 
 	for i, className := range classNames {
-		classes[i], state, err = vm.FindInitializedClass(&className, vm.mainThread)
+		classes[i], err = vm.Class(className, vm.mainThread)
 		if err != nil {
 			return nil, err
-		}
-		if state == FailedInitialization {
-			return nil, fmt.Errorf("class '%s' initialization failed", className)
 		}
 	}
 
@@ -209,8 +218,7 @@ func (vm *VM) initializeClasses(classNames []string) ([]*Class, error) {
 
 func (vm *VM) initializeMainThread() error {
 	// Create system thread group.
-	tgClassName := "java/lang/ThreadGroup"
-	tgClass, err := vm.FindClass(&tgClassName)
+	tgClass, err := vm.Class("java/lang/ThreadGroup", nil)
 	if err != nil {
 		return err
 	}
@@ -244,8 +252,7 @@ func (vm *VM) initializeMainThread() error {
 	}
 
 	// Create main thread.
-	tClassName := "java/lang/Thread"
-	tClass, err := vm.FindClass(&tClassName)
+	tClass, err := vm.Class("java/lang/Thread", nil)
 	if err != nil {
 		return err
 	}
@@ -275,13 +282,9 @@ func (vm *VM) initializeMainThread() error {
 }
 
 func (vm *VM) initializeSystemClass() error {
-	sysClassName := "java/lang/System"
-	sys, state, err := vm.FindInitializedClass(&sysClassName, vm.mainThread)
+	sys, err := vm.Class("java/lang/System", vm.mainThread)
 	if err != nil {
 		return err
-	}
-	if state == FailedInitialization {
-		return fmt.Errorf("failed initialization for java/lang/System")
 	}
 
 	frame := NewFrame(sys, sys.File().FindMethod("initializeSystemClass", "()V"))
@@ -294,4 +297,17 @@ func (vm *VM) initializeSystemClass() error {
 	}
 
 	return nil
+}
+
+func (name StdClassName) String() string {
+	switch name {
+	case JavaLangString:
+		return "java/lang/String"
+	case JavaLangClass:
+		return "java/lang/Class"
+	case JavaLangObject:
+		return "java/lang/Object"
+	default:
+		panic(fmt.Sprintf("StdClassName = %d is invalid", name))
+	}
 }

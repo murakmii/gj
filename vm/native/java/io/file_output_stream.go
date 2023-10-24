@@ -7,7 +7,7 @@ import (
 
 func FileOutputStreamWriteBytes(thread *vm.Thread, args []interface{}) error {
 	fos := args[0].(*vm.Instance)
-	bytes := vm.JavaByteArrayToGo(args[1].(*vm.Array), args[2].(int), args[3].(int))
+	bytes := vm.JavaByteArrayToGo(args[1].(*vm.Instance), args[2].(int), args[3].(int))
 
 	fdFieldName := "fd"
 

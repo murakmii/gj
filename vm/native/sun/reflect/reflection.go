@@ -6,14 +6,19 @@ import (
 
 func ReflectionGetCallerClassV(thread *vm.Thread, _ []interface{}) error {
 	callerClassName := thread.InvokerFrame().CurrentClass().File().ThisClass()
-	thread.CurrentFrame().PushOperand(thread.VM().JavaClass(&callerClassName))
+	class, err := thread.VM().Class(callerClassName, nil)
+	if err != nil {
+		return err
+	}
+
+	thread.CurrentFrame().PushOperand(class.Java())
 	return nil
 }
 
 func ReflectionGetClassAccessFlags(thread *vm.Thread, args []interface{}) error {
 	className := args[0].(*vm.Instance).VMData().(*string)
 
-	class, err := thread.VM().FindClass(className)
+	class, err := thread.VM().Class(*className, thread)
 	if err != nil {
 		return err
 	}

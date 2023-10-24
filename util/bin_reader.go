@@ -30,7 +30,12 @@ func (r *BinReader) Skip(n int) {
 }
 
 func (r *BinReader) SkipToAlign(align int) {
-	r.Skip(r.offset % align)
+	mod := r.offset % align
+	skip := 0
+	if mod > 0 {
+		skip = align - mod
+	}
+	r.Skip(skip)
 }
 
 func (r *BinReader) Seek(pos int) {

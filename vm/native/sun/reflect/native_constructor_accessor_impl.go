@@ -10,7 +10,7 @@ func NativeConstructorAccessorImplNewInstance0(thread *vm.Thread, args []interfa
 
 	clazzName := "clazz"
 	clazzDesc := "Ljava/lang/Class;"
-	class, err := thread.VM().FindClass(cstr.GetField(&clazzName, &clazzDesc).(*vm.Instance).VMData().(*string))
+	class, err := thread.VM().Class(*(cstr.GetField(&clazzName, &clazzDesc).(*vm.Instance).VMData().(*string)), thread)
 	if err != nil {
 		return err
 	}
@@ -19,15 +19,15 @@ func NativeConstructorAccessorImplNewInstance0(thread *vm.Thread, args []interfa
 	slotDesc := "I"
 	method := class.File().FindMethodByID(cstr.GetField(&slotName, &slotDesc).(int))
 
-	var cstrArgs *vm.Array
-	if args[1] == nil {
-		cstrArgs = vm.NewArray("Ljava/lang/Object;", 0)
+	var cstrArgs []interface{}
+	if args[1] != nil {
+		cstrArgs = args[1].(*vm.Instance).AsArray()
 	}
 
-	locals := make([]interface{}, cstrArgs.Length()+1)
+	locals := make([]interface{}, len(cstrArgs)+1)
 	locals[0] = vm.NewInstance(class)
-	for i := 0; i < cstrArgs.Length(); i++ {
-		locals[i+1] = cstrArgs.Get(i)
+	for i, a := range cstrArgs {
+		locals[i+1] = a
 	}
 
 	thrown, err := thread.Derive().Execute(vm.NewFrame(class, method).SetLocals(locals))

@@ -23,6 +23,13 @@ func NewInstance(class *Class) *Instance {
 	}
 }
 
+func NewArray(vm *VM, desc string, size int) (*Instance, []interface{}) {
+	arrayClass, _ := vm.Class(desc, nil)
+	array := make([]interface{}, size)
+
+	return NewInstance(arrayClass).SetVMData(array), array
+}
+
 func (instance *Instance) Class() *Class {
 	return instance.class
 }
@@ -104,16 +111,42 @@ func (instance *Instance) SetVMData(data interface{}) *Instance {
 	return instance
 }
 
+func (instance *Instance) AsArray() []interface{} {
+	return instance.vmData.([]interface{})
+}
+
 // Utility method to get value of char array field as string.
 // e.g., 'value' field of java.lang.String, 'name' field of java.lang.Thread.
 func (instance *Instance) GetCharArrayField(name string) string {
 	desc := "[C"
-	charArray := instance.GetField(&name, &desc).(*Array)
+	slice := instance.GetField(&name, &desc).(*Instance).AsArray()
 
-	u16 := make([]uint16, charArray.Length())
-	for i := 0; i < charArray.Length(); i++ {
-		u16[i] = uint16(charArray.Get(i).(int))
+	u16 := make([]uint16, len(slice))
+	for i := 0; i < len(slice); i++ {
+		u16[i] = uint16(slice[i].(int))
 	}
 
 	return string(utf16.Decode(u16))
+}
+
+func (instance *Instance) Clone() *Instance {
+	fields := make([]interface{}, len(instance.fields))
+	copy(fields, instance.fields)
+
+	clone := &Instance{
+		class:   instance.class,
+		fields:  fields,
+		monitor: NewMonitor(),
+		vmData:  instance.vmData,
+	}
+
+	if instance.class.IsArray() {
+		srcArray := instance.AsArray()
+		dstArray := make([]interface{}, len(srcArray))
+		copy(dstArray, srcArray)
+
+		clone.vmData = dstArray
+	}
+
+	return clone
 }

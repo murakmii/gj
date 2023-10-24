@@ -126,7 +126,7 @@ func (thread *Thread) StackTrack() []string {
 	}
 
 	for _, f := range thread.frameStack {
-		trace = append(trace, fmt.Sprintf("%s.%s:%s", f.curClass.File().ThisClass(), *f.curMethod.Name(), *f.curMethod.Descriptor()))
+		trace = append(trace, fmt.Sprintf("%s.%s:%s", f.curClass.File().ThisClass(), *f.curMethod.Name(), f.curMethod.Descriptor()))
 	}
 
 	return trace
@@ -137,8 +137,7 @@ func (thread *Thread) PushFrame(frame *Frame) {
 
 	if frame.CurrentMethod().IsSync() {
 		if frame.CurrentMethod().IsStatic() {
-			className := frame.CurrentClass().File().ThisClass()
-			syncObj = thread.VM().JavaClass(&className)
+			syncObj = frame.CurrentClass().Java()
 		} else {
 			syncObj = frame.Locals()[0].(*Instance)
 		}
@@ -190,7 +189,6 @@ func (thread *Thread) HandleException(thrown *Instance) {
 	}
 
 	thread.unCatchEx = thrown
-	thread.frameStack = nil
 }
 
 func (thread *Thread) Interrupt() {

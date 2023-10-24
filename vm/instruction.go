@@ -12,8 +12,6 @@ type (
 
 var (
 	InstructionSet [255]Instruction
-
-	typeCodes = []string{"Z", "C", "F", "D", "B", "S", "I", "J"}
 )
 
 func init() {
@@ -278,7 +276,12 @@ func instrLdc(idxLoader func(*Frame) uint16) Instruction {
 			frame.PushOperand(js)
 
 		case class_file.ClassCpInfo:
-			frame.PushOperand(thread.VM().JavaClass(frame.CurrentClass().File().ConstantPool().Utf8(uint16(entry))))
+			name := frame.CurrentClass().File().ConstantPool().Utf8(uint16(entry))
+			class, err := thread.VM().Class(*name, thread)
+			if err != nil {
+				return err
+			}
+			frame.PushOperand(class.Java())
 
 		default:
 			return fmt.Errorf("LDC unsupport %T:%+v", entry, entry)
@@ -302,9 +305,7 @@ func instrLoadN(n int) Instruction {
 
 func instrALoad(_ *Thread, frame *Frame) error {
 	index := frame.PopOperand().(int)
-	arrayref := frame.PopOperand().(*Array)
-
-	frame.PushOperand(arrayref.Get(index))
+	frame.PushOperand(frame.PopOperand().(*Instance).AsArray()[index])
 	return nil
 }
 
@@ -323,9 +324,8 @@ func instrStoreN(n int) Instruction {
 func InstrAStore(_ *Thread, frame *Frame) error {
 	value := frame.PopOperand()
 	index := frame.PopOperand().(int)
-	arrayref := frame.PopOperand().(*Array)
+	frame.PopOperand().(*Instance).AsArray()[index] = value
 
-	arrayref.Set(index, value)
 	return nil
 }
 
@@ -588,29 +588,35 @@ func instrIfACmpEq(_ *Thread, frame *Frame) error {
 	return nil
 }
 
-func instrIfACmpNe(_ *Thread, frame *Frame) error {
+func instrIfACmpNe(thread *Thread, frame *Frame) error {
 	branch := int16(frame.NextParamUint16())
 	value2 := frame.PopOperand()
 	value1 := frame.PopOperand()
 
-	if value1 == nil || value2 == nil {
+	/*if value1 == nil || value2 == nil {
 		if !(value1 == nil && value2 == nil) {
 			frame.JumpPC(uint16(int16(frame.PC()) + branch))
 		}
 		return nil
 	}
 
+	fmt.Printf("if_acmpeq %s:%s\n", frame.CurrentClass().File().ThisClass(), *frame.CurrentMethod().Name())
+
 	v1, ok := value1.(*Instance)
 	if !ok {
-		return fmt.Errorf("popped value2 for if_acmpeq is NOT instance")
+		return fmt.Errorf("popped value1 for if_acmpeq is NOT instance: %+v", value1)
 	}
 
 	v2, ok := value2.(*Instance)
 	if !ok {
-		return fmt.Errorf("popped value1 for if_acmpeq is NOT instance")
+		return fmt.Errorf("popped value2 for if_acmpeq is NOT instance")
 	}
 
 	if v1 != v2 {
+		frame.JumpPC(uint16(int16(frame.PC()) + branch))
+	}*/
+
+	if value1 != value2 {
 		frame.JumpPC(uint16(int16(frame.PC()) + branch))
 	}
 	return nil
@@ -657,12 +663,9 @@ func instrReturnVoid(thread *Thread, _ *Frame) error {
 
 func instrGetStatic(thread *Thread, frame *Frame) error {
 	className, name, desc := frame.CurrentClass().File().ConstantPool().Reference(frame.NextParamUint16())
-	class, state, err := thread.VM().FindInitializedClass(className, thread)
+	class, err := thread.VM().Class(*className, thread)
 	if err != nil {
 		return err
-	}
-	if state == FailedInitialization {
-		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
 
 	resolvedClass, resolvedField := class.ResolveField(*name, *desc)
@@ -673,12 +676,9 @@ func instrGetStatic(thread *Thread, frame *Frame) error {
 
 func instrPutStatic(thread *Thread, frame *Frame) error {
 	className, name, desc := frame.CurrentClass().File().ConstantPool().Reference(frame.NextParamUint16())
-	class, state, err := thread.VM().FindInitializedClass(className, thread)
+	class, err := thread.VM().Class(*className, thread)
 	if err != nil {
 		return err
-	}
-	if state == FailedInitialization {
-		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
 
 	resolvedClass, resolvedField := class.ResolveField(*name, *desc)
@@ -713,21 +713,13 @@ func instrPutField(_ *Thread, frame *Frame) error {
 func instrInvokeVirtual(thread *Thread, frame *Frame) error {
 	_, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
 
-	switch i := frame.PeekFromTop(class_file.ParseDescriptor(desc)).(type) {
+	switch i := frame.PeekFromTop(len(class_file.MethodDescriptor(*desc).Params())).(type) {
 	case *Instance:
 		resolvedClass, resolvedMethod := i.Class().ResolveMethod(*name, *desc)
 		if resolvedClass == nil || !resolvedMethod.IsCallableForInstance() {
 			return fmt.Errorf("method not found: %s.%s", *name, *desc)
 		}
 		return thread.ExecMethod(resolvedClass, resolvedMethod)
-
-	case *Array:
-		if *name == "clone" {
-			thread.CurrentFrame().PushOperand(i.Clone())
-		} else {
-			return fmt.Errorf("invokevirtual: call '%s' for array", *name)
-		}
-		return nil
 
 	default:
 		return fmt.Errorf("invokevirtual: receiver is invalid object: %+v", i)
@@ -736,12 +728,9 @@ func instrInvokeVirtual(thread *Thread, frame *Frame) error {
 
 func instrInvokeSpecial(thread *Thread, frame *Frame) error {
 	className, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
-	class, state, err := thread.VM().FindInitializedClass(className, thread)
+	class, err := thread.VM().Class(*className, thread)
 	if err != nil {
 		return err
-	}
-	if state == FailedInitialization {
-		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
 
 	resolvedClass, resolvedMethod := class.ResolveMethod(*name, *desc)
@@ -754,12 +743,9 @@ func instrInvokeSpecial(thread *Thread, frame *Frame) error {
 
 func instrInvokeStatic(thread *Thread, frame *Frame) error {
 	className, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
-	class, state, err := thread.VM().FindInitializedClass(className, thread)
+	class, err := thread.VM().Class(*className, thread)
 	if err != nil {
 		return err
-	}
-	if state == FailedInitialization {
-		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
 
 	resolvedClass, resolvedMethod := class.ResolveMethod(*name, *desc)
@@ -772,7 +758,7 @@ func instrInvokeStatic(thread *Thread, frame *Frame) error {
 
 func instrInvokeInterface(thread *Thread, frame *Frame) error {
 	_, name, desc := frame.curClass.File().ConstantPool().Reference(frame.NextParamUint16())
-	instance := frame.PeekFromTop(class_file.ParseDescriptor(desc)).(*Instance)
+	instance := frame.PeekFromTop(len(class_file.MethodDescriptor(*desc).Params())).(*Instance)
 	if instance == nil {
 		return fmt.Errorf("receiver instance is null")
 	}
@@ -789,35 +775,37 @@ func instrInvokeInterface(thread *Thread, frame *Frame) error {
 
 func instrNew(thread *Thread, frame *Frame) error {
 	className := frame.curClass.File().ConstantPool().ClassInfo(frame.NextParamUint16())
-	class, state, err := thread.VM().FindInitializedClass(className, thread)
+	class, err := thread.VM().Class(*className, thread)
 	if err != nil {
 		return err
-	}
-	if state == FailedInitialization {
-		return fmt.Errorf("failed initialization of waiting class: %s", *className)
 	}
 
 	frame.PushOperand(NewInstance(class))
 	return nil
 }
 
-func instrNewArray(_ *Thread, frame *Frame) error {
-	frame.PushOperand(NewArray(typeCodes[frame.NextParamByte()-4], frame.PopOperand().(int)))
+var typeCodes = []string{"Z", "C", "F", "D", "B", "S", "I", "J"}
+
+func instrNewArray(thread *Thread, frame *Frame) error {
+	arrayClass := "[" + typeCodes[frame.NextParamByte()-4]
+	array, _ := NewArray(thread.VM(), arrayClass, frame.PopOperand().(int))
+	frame.PushOperand(array)
 	return nil
 }
 
-func instrANewArray(_ *Thread, frame *Frame) error {
-	className := frame.curClass.File().ConstantPool().ClassInfo(frame.NextParamUint16())
-	frame.PushOperand(NewArray(*className, frame.PopOperand().(int)))
+func instrANewArray(thread *Thread, frame *Frame) error {
+	className := *(frame.curClass.File().ConstantPool().ClassInfo(frame.NextParamUint16()))
+	if className[0] != '[' {
+		className = "L" + className + ";"
+	}
+
+	array, _ := NewArray(thread.VM(), "["+className, frame.PopOperand().(int))
+	frame.PushOperand(array)
 	return nil
 }
 
 func instrArrayLength(_ *Thread, frame *Frame) error {
-	array, ok := frame.PopOperand().(*Array)
-	if !ok {
-		return fmt.Errorf("called arraylength for instance is NOT array")
-	}
-	frame.PushOperand(array.Length())
+	frame.PushOperand(len(frame.PopOperand().(*Instance).AsArray()))
 	return nil
 }
 
@@ -839,12 +827,9 @@ func instrCheckCast(thread *Thread, frame *Frame) error {
 	switch o := objRef.(type) {
 	case *Instance:
 		if o.Class().IsInstanceOf(className) {
-			_, state, err := thread.VM().FindInitializedClass(className, thread)
+			_, err := thread.VM().Class(*className, thread)
 			if err != nil {
 				return err
-			}
-			if state == FailedInitialization {
-				return fmt.Errorf("failed initialization of waiting class: %s", *className)
 			}
 			//o.Cast(class)
 

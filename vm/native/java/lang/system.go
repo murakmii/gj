@@ -7,14 +7,15 @@ import (
 )
 
 func SystemArrayCopy(thread *vm.Thread, args []interface{}) error {
-	src := args[0].(*vm.Array)
+	src := args[0].(*vm.Instance).AsArray()
 	srcStart := args[1].(int)
-	dst := args[2].(*vm.Array)
+	dst := args[2].(*vm.Instance).AsArray()
 	dstStart := args[3].(int)
 	count := args[4].(int)
 
+	// TODO: copy
 	for i := 0; i < count; i++ {
-		dst.Set(dstStart+i, src.Get(srcStart+i))
+		dst[dstStart+i] = src[srcStart+i]
 	}
 
 	return nil
@@ -59,8 +60,7 @@ func SystemInitProperties(thread *vm.Thread, args []interface{}) error {
 
 func SystemSetArg0ToField(name, desc string) vm.NativeMethodFunc {
 	return func(thread *vm.Thread, args []interface{}) error {
-		className := "java/lang/System"
-		sys, err := thread.VM().FindClass(&className)
+		sys, err := thread.VM().Class("java/lang/System", thread)
 		if err != nil {
 			return err
 		}

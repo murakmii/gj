@@ -19,7 +19,7 @@ func (e *JavaError) Error() string {
 }
 
 func (e *JavaError) CreateException(thread *Thread) (*Instance, error) {
-	exClass, _, err := thread.VM().FindInitializedClass(&e.exception, thread)
+	exClass, err := thread.VM().Class(e.exception, thread)
 	if err != nil {
 		return nil, err
 	}

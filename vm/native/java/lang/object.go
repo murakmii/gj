@@ -6,6 +6,11 @@ import (
 	"unsafe"
 )
 
+func ObjectClone(thread *vm.Thread, args []interface{}) error {
+	thread.CurrentFrame().PushOperand(args[0].(*vm.Instance).Clone())
+	return nil
+}
+
 func ObjectHashCode(thread *vm.Thread, args []interface{}) error {
 	instance, ok := args[0].(*vm.Instance)
 	if !ok {
@@ -17,12 +22,7 @@ func ObjectHashCode(thread *vm.Thread, args []interface{}) error {
 }
 
 func ObjectGetClass(thread *vm.Thread, args []interface{}) error {
-	instance := args[0].(*vm.Instance)
-	className := instance.Class().File().ThisClass()
-
-	thread.CurrentFrame().PushOperand(
-		vm.NewInstance(thread.VM().JavaLangClassClass()).SetVMData(&className))
-
+	thread.CurrentFrame().PushOperand(args[0].(*vm.Instance).Class().Java())
 	return nil
 }
 

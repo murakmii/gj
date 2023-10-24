@@ -50,6 +50,7 @@ func init() {
 
 	vm.RegisterNativeMethod("java/lang/Object/getClass()Ljava/lang/Class;", lang.ObjectGetClass)
 	vm.RegisterNativeMethod("java/lang/Object/registerNatives()V", nop)
+	vm.RegisterNativeMethod("java/lang/Object/clone()Ljava/lang/Object;", lang.ObjectClone)
 	vm.RegisterNativeMethod("java/lang/Object/hashCode()I", lang.ObjectHashCode)
 	vm.RegisterNativeMethod("java/lang/Object/wait(J)V", lang.ObjectWait)
 	vm.RegisterNativeMethod("java/lang/Object/notifyAll()V", lang.ObjectNotifyAll)

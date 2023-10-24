@@ -12,30 +12,33 @@ var (
 )
 
 func (s GoString) ToJavaString(thread *Thread) *Instance {
-	js := NewInstance(thread.VM().JavaLangStringClass())
+	js := NewInstance(thread.VM().StdClass(JavaLangString))
 
 	u16 := utf16.Encode([]rune(s))
-	charArray := NewArray("C", len(u16))
+	instance, slice := NewArray(thread.VM(), "[C", len(u16))
+
 	for i, e := range u16 {
-		charArray.Set(i, int(e))
+		slice[i] = int(e)
 	}
 
-	js.PutField(&javaLangStringValueField, &javaLangStringValueDesc, charArray)
+	js.PutField(&javaLangStringValueField, &javaLangStringValueDesc, instance)
 	return js
 }
 
-func ByteSliceToJavaArray(bytes []byte) *Array {
-	array := NewArray("B", len(bytes))
+func ByteSliceToJavaArray(vm *VM, bytes []byte) *Instance {
+	instance, slice := NewArray(vm, "[B", len(bytes))
 	for i, b := range bytes {
-		array.Set(i, b)
+		slice[i] = int(b)
 	}
-	return array
+	return instance
 }
 
-func JavaByteArrayToGo(array *Array, offset, size int) []byte {
+func JavaByteArrayToGo(array *Instance, offset, size int) []byte {
+	slice := array.AsArray()
 	bytes := make([]byte, size)
+
 	for i := 0; i < size; i++ {
-		bytes[i] = byte(array.Get(i + offset).(int))
+		bytes[i] = byte(slice[offset+i].(int))
 	}
 	return bytes
 }

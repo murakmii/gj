@@ -26,8 +26,11 @@ type (
 		attributes []interface{}
 	}
 
-	MethodInfo reference
-	FieldInfo  reference
+	MethodInfo struct {
+		reference
+		numArgs int
+	}
+	FieldInfo reference
 
 	reference struct {
 		id         int
@@ -54,6 +57,36 @@ func OpenClassFile(path string) (*ClassFile, error) {
 	defer f.Close()
 
 	return readClassFile(f)
+}
+
+func CreateArrayClassFile(name string) *ClassFile {
+	object := "java/lang/Object"
+
+	return &ClassFile{
+		cp: &ConstantPool{
+			cpInfo: []interface{}{
+				ClassCpInfo(2),
+				ClassCpInfo(3),
+				&name,
+				&object,
+			},
+		},
+		this:  0,
+		super: 1,
+	}
+}
+
+func CreatePrimitiveClassFile(name string) *ClassFile {
+	return &ClassFile{
+		cp: &ConstantPool{
+			cpInfo: []interface{}{
+				ClassCpInfo(1),
+				&name,
+			},
+		},
+		this:  0,
+		super: 0,
+	}
 }
 
 func readClassFile(cfReader io.Reader) (*ClassFile, error) {
@@ -100,8 +133,10 @@ func readClassFile(cfReader io.Reader) (*ClassFile, error) {
 	})
 
 	class.methods = make([]*MethodInfo, 0)
-	for i, m := range readReference[MethodInfo](r, class.cp) {
+	for i, ref := range readReference[reference](r, class.cp) {
+		m := &MethodInfo{reference: *ref}
 		m.SetID(i)
+		m.numArgs = len(m.Descriptor().Params())
 		class.methods = append(class.methods, m)
 	}
 
@@ -121,7 +156,7 @@ func readInterfaces(r *util.BinReader) []uint16 {
 	return interfaces
 }
 
-func readReference[T FieldInfo | MethodInfo](r *util.BinReader, cp *ConstantPool) []*T {
+func readReference[T FieldInfo | reference](r *util.BinReader, cp *ConstantPool) []*T {
 	count := r.ReadUint16()
 	refs := make([]*T, count)
 
@@ -144,14 +179,6 @@ func (c *ClassFile) AccessFlag() AccessFlag {
 
 func (c *ClassFile) ConstantPool() *ConstantPool {
 	return c.cp
-}
-
-func (c *ClassFile) ClassInitializer() *MethodInfo {
-	return c.FindMethod("<clinit>", "()V")
-}
-
-func (c *ClassFile) Initializer() *MethodInfo {
-	return c.FindMethod("<init>", "()V")
 }
 
 func (c *ClassFile) SuperClass() *string {
@@ -216,58 +243,6 @@ func (c *ClassFile) FindMethodByID(id int) *MethodInfo {
 	return c.methods[id]
 }
 
-func ParseDescriptor(descriptor *string) int {
-	n := 0
-	desc := []byte(*descriptor)
-
-	for {
-		desc = desc[1:]
-		switch desc[0] {
-		case 'L':
-			desc = desc[bytes.IndexByte(desc, ';')-1:]
-		case '[':
-			// do nothing
-		case ')':
-			return n
-		default:
-			n++
-		}
-	}
-}
-
-func ParseDescriptor2(desc []byte) []string {
-	var paramClasses []string
-
-	for len(desc) > 0 {
-		switch desc[0] {
-		case '(':
-			desc = desc[1:]
-
-		case ')':
-			desc = nil
-
-		case 'L':
-			sc := bytes.IndexByte(desc, ';')
-			paramClasses = append(paramClasses, string(desc[1:sc]))
-			desc = desc[sc+1:]
-
-		case '[':
-			ret := ParseDescriptor2(desc[1:])
-			ret[0] = "[" + ret[0]
-			for _, r := range ret {
-				paramClasses = append(paramClasses, r)
-			}
-			desc = nil
-
-		default:
-			paramClasses = append(paramClasses, string(desc[0]))
-			desc = desc[1:]
-		}
-	}
-
-	return paramClasses
-}
-
 func (m *MethodInfo) IsCallableForInstance() bool {
 	return !m.accessFlag.Contain(StaticFlag) && !m.accessFlag.Contain(AbstractFlag)
 }
@@ -288,8 +263,8 @@ func (m *MethodInfo) Name() *string {
 	return m.name
 }
 
-func (m *MethodInfo) Descriptor() *string {
-	return m.desc
+func (m *MethodInfo) Descriptor() MethodDescriptor {
+	return MethodDescriptor(*m.desc)
 }
 
 func (m *MethodInfo) IsNative() bool {
@@ -322,7 +297,7 @@ func (m *MethodInfo) Code() *CodeAttr {
 }
 
 func (m *MethodInfo) NumArgs() int {
-	n := ParseDescriptor(m.desc)
+	n := m.numArgs
 	if !m.accessFlag.Contain(StaticFlag) {
 		n++
 	}
@@ -378,8 +353,8 @@ func (f *FieldInfo) Name() *string {
 	return f.name
 }
 
-func (f *FieldInfo) Desc() *string {
-	return f.desc
+func (f *FieldInfo) Descriptor() FieldType {
+	return FieldType(*f.desc)
 }
 
 func (f *FieldInfo) ConstantValue() (ConstantValueAttr, bool) {

@@ -29,7 +29,7 @@ func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
 		return nil
 	}
 
-	argClass, err := thread.VM().FindClass(argName)
+	argClass, err := thread.VM().Class(*argName, thread)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
 func ClassIsInterface(thread *vm.Thread, args []interface{}) error {
 	className := args[0].(*vm.Instance).VMData().(*string)
 
-	class, err := thread.VM().FindClass(className)
+	class, err := thread.VM().Class(*className, thread)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func ClassIsPrimitive(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassGetModifiers(thread *vm.Thread, args []interface{}) error {
-	class, err := thread.VM().FindClass(args[0].(*vm.Instance).VMData().(*string))
+	class, err := thread.VM().Class(*(args[0].(*vm.Instance).VMData().(*string)), thread)
 	if err != nil {
 		return err
 	}
@@ -99,31 +99,22 @@ func ClassGetName0(thread *vm.Thread, args []interface{}) error {
 
 func ClassForName0(thread *vm.Thread, args []interface{}) error {
 	name := strings.ReplaceAll(args[0].(*vm.Instance).GetCharArrayField("value"), ".", "/")
-	sig := class_file.JavaTypeSignature(name)
 
-	if !sig.IsPrimitive() && !sig.IsArray() {
-		_, state, err := thread.VM().FindInitializedClass(&name, thread)
-		if err != nil {
-			return err
-		}
-		if state == vm.FailedInitialization {
-			return fmt.Errorf("failed initialization of class class in Class.getDeclaredFields0")
-		}
+	class, err := thread.VM().Class(name, thread)
+	if err != nil {
+		return err
 	}
 
-	thread.CurrentFrame().PushOperand(thread.VM().JavaClass(&name))
+	thread.CurrentFrame().PushOperand(class.Java())
 	return nil
 }
 
 func ClassGetSuperClass(thread *vm.Thread, args []interface{}) error {
 	classInstance := args[0].(*vm.Instance)
 
-	class, state, err := thread.VM().FindInitializedClass(classInstance.VMData().(*string), thread)
+	class, err := thread.VM().Class(*(classInstance.VMData().(*string)), thread)
 	if err != nil {
 		return err
-	}
-	if state == vm.FailedInitialization {
-		return fmt.Errorf("failed initialization of class class in Class.getDeclaredFields0")
 	}
 
 	if class.Super() == nil {
@@ -131,18 +122,14 @@ func ClassGetSuperClass(thread *vm.Thread, args []interface{}) error {
 		return nil
 	}
 
-	superName := class.Super().File().ThisClass()
-	thread.CurrentFrame().PushOperand(thread.VM().JavaClass(&superName))
+	thread.CurrentFrame().PushOperand(class.Super().Java())
 	return nil
 }
 
 func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
-	class, state, err := thread.VM().FindInitializedClass(args[0].(*vm.Instance).VMData().(*string), thread)
+	class, err := thread.VM().Class(*(args[0].(*vm.Instance).VMData().(*string)), thread)
 	if err != nil {
 		return err
-	}
-	if state == vm.FailedInitialization {
-		return fmt.Errorf("failed initialization of class class in Class.getDeclaredConstrutors0")
 	}
 
 	pubOnly := args[1].(int) == 1
@@ -153,17 +140,13 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 		}
 	}
 
-	cstrClassName := "java/lang/reflect/Constructor"
-	cstrClass, state, err := thread.VM().FindInitializedClass(&cstrClassName, thread)
+	cstrClass, err := thread.VM().Class("java/lang/reflect/Constructor", thread)
 	if err != nil {
 		return err
 	}
-	if state == vm.FailedInitialization {
-		return fmt.Errorf("failed initialization of class class in Class.getDeclaredConstrutors0")
-	}
 
 	_, cstr := cstrClass.ResolveMethod("<init>", "(Ljava/lang/Class;[Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B)V")
-	ret := vm.NewArray("Ljava/lang/reflect/Constructor;", len(cstrs))
+	ret, retSlice := vm.NewArray(thread.VM(), "[Ljava/lang/reflect/Constructor;", len(cstrs))
 
 	for i, c := range cstrs {
 		cInstance := vm.NewInstance(cstrClass)
@@ -174,36 +157,27 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 			signature = vm.GoString(*class.File().ConstantPool().Utf8(uint16(sig))).ToJavaString(thread)
 		}
 
-		params := class_file.ParseDescriptor2([]byte(*c.Descriptor()))
-		pArray := vm.NewArray("Ljava/lang/Class", len(params))
+		params := c.Descriptor().Params()
+		pArray, pSlice := vm.NewArray(thread.VM(), "[Ljava/lang/Class;", len(params))
 		for i, p := range params {
-			jts := class_file.JavaTypeSignature(p)
-			if jts.IsReference() && !jts.IsArray() {
-				_, state, err := thread.VM().FindInitializedClass(&p, thread)
-				if err != nil {
-					return err
-				}
-				if state == vm.FailedInitialization {
-					return fmt.Errorf("failed initialization of class class in Class.getDeclaredConstrutors0")
-				}
-			}
-
-			pArray.Set(i, thread.VM().JavaClass(&p))
-		}
-
-		exceptions := c.Exceptions()
-		eArray := vm.NewArray("Ljava/lang/Class", len(exceptions))
-		for i, e := range exceptions {
-			eName := class.File().ConstantPool().ClassInfo(e)
-			_, state, err := thread.VM().FindInitializedClass(eName, thread)
+			class, err := thread.VM().Class(p.Type(), thread)
 			if err != nil {
 				return err
 			}
-			if state == vm.FailedInitialization {
-				return fmt.Errorf("failed initialization of class class in Class.getDeclaredConstrutors0")
+
+			pSlice[i] = class.Java()
+		}
+
+		exceptions := c.Exceptions()
+		eArray, eSlice := vm.NewArray(thread.VM(), "[Ljava/lang/Class;", len(exceptions))
+		for i, e := range exceptions {
+			eName := class.File().ConstantPool().ClassInfo(e)
+			eClass, err := thread.VM().Class(*eName, thread)
+			if err != nil {
+				return err
 			}
 
-			eArray.Set(i, thread.VM().JavaClass(eName))
+			eSlice[i] = eClass.Java()
 		}
 
 		thrown, err := thread.Derive().Execute(vm.NewFrame(cstrClass, cstr).SetLocals([]interface{}{
@@ -214,8 +188,8 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 			int(c.AccessFlag()),
 			c.ID(),
 			signature,
-			vm.ByteSliceToJavaArray(c.RawAnnotations()),
-			vm.ByteSliceToJavaArray(c.RawParamAnnotations()),
+			vm.ByteSliceToJavaArray(thread.VM(), c.RawAnnotations()),
+			vm.ByteSliceToJavaArray(thread.VM(), c.RawParamAnnotations()),
 		}))
 		if err != nil {
 			return err
@@ -224,7 +198,7 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 			return fmt.Errorf("exception in Class.getDeclaredConstrutors0: %+v", thrown)
 		}
 
-		ret.Set(i, cInstance)
+		retSlice[i] = cInstance
 	}
 
 	thread.CurrentFrame().PushOperand(ret)
@@ -235,12 +209,9 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 	class := args[0].(*vm.Instance)
 	pubOnly := args[1].(int) == 1
 
-	targetClass, state, err := thread.VM().FindInitializedClass(class.VMData().(*string), thread)
+	targetClass, err := thread.VM().Class(*(class.VMData().(*string)), thread)
 	if err != nil {
 		return err
-	}
-	if state == vm.FailedInitialization {
-		return fmt.Errorf("failed initialization of class class in Class.getDeclaredFields0")
 	}
 
 	var fields []*class_file.FieldInfo
@@ -250,17 +221,13 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 		}
 	}
 
-	fieldClassName := "java/lang/reflect/Field"
-	fieldClass, state, err := thread.VM().FindInitializedClass(&fieldClassName, thread)
+	fieldClass, err := thread.VM().Class("java/lang/reflect/Field", thread)
 	if err != nil {
 		return err
 	}
-	if state == vm.FailedInitialization {
-		return fmt.Errorf("failed initialization of class class in Class.getDeclaredFields0")
-	}
 
 	_, cstr := fieldClass.ResolveMethod("<init>", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B)V")
-	ret := vm.NewArray("Ljava/lang/reflect/Field;", len(fields))
+	ret, retSlice := vm.NewArray(thread.VM(), "[Ljava/lang/reflect/Field;", len(fields))
 
 	for i, f := range fields {
 		fInstance := vm.NewInstance(fieldClass)
@@ -271,20 +238,20 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 			signature = vm.GoString(*targetClass.File().ConstantPool().Utf8(uint16(sig))).ToJavaString(thread)
 		}
 
-		annotation := vm.NewArray("B", len(f.RawAnnotations()))
-		for i, b := range f.RawAnnotations() {
-			annotation.Set(i, int(b))
+		descClass, err := thread.VM().Class(f.Descriptor().Type(), thread)
+		if err != nil {
+			return err
 		}
 
 		thrown, err := thread.Derive().Execute(vm.NewFrame(fieldClass, cstr).SetLocals([]interface{}{
 			fInstance,
 			class,
 			thread.VM().JavaString2(thread, f.Name()),
-			thread.VM().JavaClass(f.Desc()),
+			descClass.Java(),
 			int(f.AccessFlag()),
 			f.ID(),
 			signature,
-			annotation,
+			vm.ByteSliceToJavaArray(thread.VM(), f.RawAnnotations()),
 		}))
 		if err != nil {
 			return err
@@ -293,7 +260,7 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 			return fmt.Errorf("exception in Class.getDeclaredFields0: %+v", thrown)
 		}
 
-		ret.Set(i, fInstance)
+		retSlice[i] = fInstance
 	}
 
 	thread.CurrentFrame().PushOperand(ret)
