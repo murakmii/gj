@@ -225,12 +225,9 @@ func (vm *VM) initializeMainThread() error {
 
 	sysTg := NewInstance(tgClass)
 	frame := NewFrame(tgClass, tgClass.File().FindMethod("<init>", "()V")).SetLocal(0, sysTg)
-	thrown, err := vm.mainThread.Derive().Execute(frame)
+	err = vm.mainThread.Execute(frame)
 	if err != nil {
 		return err
-	}
-	if thrown != nil {
-		return fmt.Errorf("failed to construct system thread group. thrown: %+v", thrown)
 	}
 
 	// Create main thread group.
@@ -243,12 +240,9 @@ func (vm *VM) initializeMainThread() error {
 	mainTg := NewInstance(tgClass)
 	frame = NewFrame(tgClass, tgClass.File().FindMethod("<init>", "(Ljava/lang/ThreadGroup;Ljava/lang/String;)V")).
 		SetLocals([]interface{}{mainTg, sysTg, mainJs})
-	thrown, err = vm.mainThread.Derive().Execute(frame)
+	err = vm.mainThread.Execute(frame)
 	if err != nil {
 		return err
-	}
-	if thrown != nil {
-		return fmt.Errorf("failed to construct main thread group. thrown: %+v", thrown)
 	}
 
 	// Create main thread.
@@ -270,12 +264,9 @@ func (vm *VM) initializeMainThread() error {
 
 	frame = NewFrame(tClass, tClass.File().FindMethod("<init>", "(Ljava/lang/ThreadGroup;Ljava/lang/String;)V")).
 		SetLocals([]interface{}{mainJThread, mainTg, mainJs})
-	thrown, err = vm.mainThread.Derive().Execute(frame)
+	err = vm.mainThread.Execute(frame)
 	if err != nil {
 		return err
-	}
-	if thrown != nil {
-		return fmt.Errorf("failed to construct main thread. thrown: %+v", thrown)
 	}
 
 	return nil
@@ -288,12 +279,9 @@ func (vm *VM) initializeSystemClass() error {
 	}
 
 	frame := NewFrame(sys, sys.File().FindMethod("initializeSystemClass", "()V"))
-	thrown, err := vm.mainThread.Derive().Execute(frame)
+	err = vm.mainThread.Execute(frame)
 	if err != nil {
 		return err
-	}
-	if thrown != nil {
-		return fmt.Errorf("failed to call java/lang/System.initializeSystemClass. thrown: %+v", thrown)
 	}
 
 	return nil

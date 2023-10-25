@@ -51,7 +51,7 @@ func main() {
 	if print {
 		execPrint(classPaths)
 	} else {
-		execVM(config, mainClass)
+		execVM(config)
 	}
 }
 
@@ -84,7 +84,7 @@ func execPrint(classPaths []gj.ClassPath) {
 	fmt.Println("class not found")
 }
 
-func execVM(config *gj.Config, mainClassName string) {
+func execVM(config *gj.Config) {
 	start := time.Now().UnixMilli()
 	vmInstance, err := vm.InitVM(config)
 	if err != nil {
@@ -100,21 +100,14 @@ func execVM(config *gj.Config, mainClassName string) {
 		panic(err)
 	}
 
-	alive := true
-	for alive {
-		select {
-		case result, ok := <-vmInstance.Executor().Wait():
-			if !ok {
-				alive = false
-				break
-			}
+	for {
+		result, ok := <-vmInstance.Executor().Wait()
+		if !ok {
+			break
+		}
 
-			if result.Err != nil {
-				fmt.Printf("[VM] occurred error in thread '%s': %s\n", result.Thread.Name(), result.Err)
-			}
-			if result.UnCatchEx != nil {
-				fmt.Printf("[VM] uncatch exception in thread '%s': %+v\n", result.Thread.Name(), result.UnCatchEx)
-			}
+		if result.Err != nil {
+			fmt.Printf("[VM] occurred error in thread '%s': %s\n", result.Thread.Name(), result.Err)
 		}
 	}
 

@@ -3,7 +3,6 @@ package vm
 import (
 	"fmt"
 	"github.com/murakmii/gj/class_file"
-	"strings"
 	"sync"
 )
 
@@ -199,7 +198,7 @@ func (class *Class) Initialize(curThread *Thread) (ClassState, error) {
 		return class.state, nil
 
 	case Initializing:
-		if curThread.Equal(class.initBy) {
+		if curThread == class.initBy {
 			class.initCond.L.Unlock()
 			return class.state, nil
 		}
@@ -280,27 +279,10 @@ func (class *Class) initialize(curThread *Thread) error {
 	// Call clinit
 	clinit := class.file.FindMethod("<clinit>", "()V")
 	if clinit != nil {
-		unCatchEx, err := curThread.Derive().Execute(NewFrame(class, clinit))
+		err = curThread.Execute(NewFrame(class, clinit))
 		if err != nil {
-			return err
-		}
-
-		if unCatchEx != nil {
 			state = FailedInitialization
-
-			fmt.Println("------------------------")
-
-			//detail := "detailMessage"
-			//detailDesc := "Ljava/lang/String;"
-			//fmt.Printf("!!! exception: %s\n\n", JavaStringToGoString(unCatchEx.GetField(&detail, &detailDesc).(*Instance)))
-
-			for i, t := range unCatchEx.VMData().([]string) {
-				fmt.Printf("%s%s\n", strings.Repeat(" ", i), t)
-			}
-
-			fmt.Println("------------------------")
-
-			return nil
+			return err
 		}
 	}
 

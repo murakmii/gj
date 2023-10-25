@@ -8,16 +8,14 @@ import (
 
 type (
 	Thread struct {
-		vm          *VM
-		name        string
-		main        bool
-		daemon      bool
-		java        *Instance
-		derivedFrom *Thread
-		frameStack  []*Frame
-		syncStack   []*Instance
-		alive       bool
-		unCatchEx   *Instance
+		vm         *VM
+		name       string
+		main       bool
+		daemon     bool
+		java       *Instance
+		frameStack []*Frame
+		syncStack  []*Instance
+		alive      bool
 
 		interLock    *sync.Mutex
 		interrupted  bool
@@ -25,9 +23,8 @@ type (
 	}
 
 	ThreadResult struct {
-		Thread    *Thread
-		Err       error
-		UnCatchEx *Instance
+		Thread *Thread
+		Err    error
 	}
 
 	ThreadExecutor struct {
@@ -61,15 +58,6 @@ func (thread *Thread) VM() *VM {
 	return thread.vm
 }
 
-func (thread *Thread) Derive() *Thread {
-	return &Thread{
-		vm:          thread.vm,
-		name:        thread.name,
-		java:        thread.java,
-		derivedFrom: thread,
-	}
-}
-
 func (thread *Thread) Name() string {
 	return thread.name
 }
@@ -86,22 +74,33 @@ func (thread *Thread) IsDaemon() bool {
 	return thread.daemon
 }
 
-func (thread *Thread) Equal(t *Thread) bool {
-	return t == thread || (thread.derivedFrom != nil && thread.derivedFrom.Equal(t))
-}
-
-func (thread *Thread) Execute(frame *Frame) (*Instance, error) {
+func (thread *Thread) Execute(frame *Frame) error {
+	bottom := len(thread.frameStack)
 	thread.PushFrame(frame)
 
-	for len(thread.frameStack) > 0 {
+INSTR:
+	for len(thread.frameStack) > bottom {
 		curFrame := thread.frameStack[len(thread.frameStack)-1]
 
-		if err := ExecInstr(thread, curFrame, curFrame.NextInstr()); err != nil {
-			return nil, err
+		err := ExecInstr(thread, curFrame, curFrame.NextInstr())
+		if err != nil {
+			if javaErr := UnwrapJavaError(err); javaErr != nil {
+				for ; len(thread.frameStack) > bottom; thread.PopFrame() {
+					handler := curFrame.FindCurrentExceptionHandler(javaErr.Exception())
+
+					if handler != nil {
+						frame.JumpPC(*handler)
+						frame.ClearOperand()
+						frame.PushOperand(javaErr.Exception())
+						break INSTR
+					}
+				}
+			}
+			return err
 		}
 	}
 
-	return thread.unCatchEx, nil
+	return nil
 }
 
 func (thread *Thread) ExecMethod(class *Class, method *class_file.MethodInfo) error {
@@ -118,12 +117,6 @@ func (thread *Thread) ExecMethod(class *Class, method *class_file.MethodInfo) er
 
 func (thread *Thread) StackTrack() []string {
 	var trace []string
-
-	if thread.derivedFrom != nil {
-		for _, t := range thread.derivedFrom.StackTrack() {
-			trace = append(trace, t)
-		}
-	}
 
 	for _, f := range thread.frameStack {
 		trace = append(trace, fmt.Sprintf("%s.%s:%s", f.curClass.File().ThisClass(), *f.curMethod.Name(), f.curMethod.Descriptor()))
@@ -171,24 +164,6 @@ func (thread *Thread) CurrentFrame() *Frame {
 		return nil
 	}
 	return thread.frameStack[len(thread.frameStack)-1]
-}
-
-func (thread *Thread) HandleException(thrown *Instance) {
-	for len(thread.frameStack) > 0 {
-		frame := thread.CurrentFrame()
-		handler := frame.FindCurrentExceptionHandler(thrown)
-
-		if handler != nil {
-			frame.JumpPC(*handler)
-			frame.ClearOperand()
-			frame.PushOperand(thrown)
-			return
-		}
-
-		thread.PopFrame()
-	}
-
-	thread.unCatchEx = thrown
 }
 
 func (thread *Thread) Interrupt() {
@@ -241,7 +216,7 @@ func (executor *ThreadExecutor) Start(thread *Thread, frame *Frame) {
 	}
 
 	go func() {
-		unCatch, err := thread.Execute(frame)
+		err := thread.Execute(frame)
 		thread.alive = false
 
 		thread.JavaThread().Monitor().Enter(thread, -1)
@@ -257,9 +232,8 @@ func (executor *ThreadExecutor) Start(thread *Thread, frame *Frame) {
 		executor.lock.Unlock()
 
 		executor.result <- &ThreadResult{
-			Thread:    thread,
-			Err:       err,
-			UnCatchEx: unCatch,
+			Thread: thread,
+			Err:    err,
 		}
 
 		if done {

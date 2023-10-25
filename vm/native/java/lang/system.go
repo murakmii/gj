@@ -45,12 +45,9 @@ func SystemInitProperties(thread *vm.Thread, args []interface{}) error {
 			return fmt.Errorf("failed to instantiate string for system prorperty value")
 		}
 
-		thrown, err := thread.Derive().Execute(vm.NewFrame(class, method).SetLocals([]interface{}{props, kJS, vJS}))
+		err = thread.Execute(vm.NewFrame(class, method).SetLocals([]interface{}{props, kJS, vJS}))
 		if err != nil {
 			return err
-		}
-		if thrown != nil {
-			return fmt.Errorf("failed to set system property %s:%s = %+v", k, v, thrown)
 		}
 	}
 

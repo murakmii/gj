@@ -1,7 +1,6 @@
 package lang
 
 import (
-	"fmt"
 	"github.com/murakmii/gj/class_file"
 	"github.com/murakmii/gj/vm"
 	"strings"
@@ -180,7 +179,7 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 			eSlice[i] = eClass.Java()
 		}
 
-		thrown, err := thread.Derive().Execute(vm.NewFrame(cstrClass, cstr).SetLocals([]interface{}{
+		err = thread.Execute(vm.NewFrame(cstrClass, cstr).SetLocals([]interface{}{
 			cInstance,
 			args[0],
 			pArray,
@@ -193,9 +192,6 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 		}))
 		if err != nil {
 			return err
-		}
-		if thrown != nil {
-			return fmt.Errorf("exception in Class.getDeclaredConstrutors0: %+v", thrown)
 		}
 
 		retSlice[i] = cInstance
@@ -243,7 +239,7 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 			return err
 		}
 
-		thrown, err := thread.Derive().Execute(vm.NewFrame(fieldClass, cstr).SetLocals([]interface{}{
+		err = thread.Execute(vm.NewFrame(fieldClass, cstr).SetLocals([]interface{}{
 			fInstance,
 			class,
 			thread.VM().JavaString2(thread, f.Name()),
@@ -255,9 +251,6 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 		}))
 		if err != nil {
 			return err
-		}
-		if thrown != nil {
-			return fmt.Errorf("exception in Class.getDeclaredFields0: %+v", thrown)
 		}
 
 		retSlice[i] = fInstance

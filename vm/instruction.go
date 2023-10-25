@@ -809,9 +809,8 @@ func instrArrayLength(_ *Thread, frame *Frame) error {
 	return nil
 }
 
-func instrAThrow(thread *Thread, frame *Frame) error {
-	thread.HandleException(frame.PopOperand().(*Instance))
-	return nil
+func instrAThrow(_ *Thread, frame *Frame) error {
+	return NewJavaErr(frame.PopOperand().(*Instance))
 }
 
 func instrCheckCast(thread *Thread, frame *Frame) error {

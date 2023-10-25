@@ -1,7 +1,6 @@
 package reflect
 
 import (
-	"fmt"
 	"github.com/murakmii/gj/vm"
 )
 
@@ -30,12 +29,9 @@ func NativeConstructorAccessorImplNewInstance0(thread *vm.Thread, args []interfa
 		locals[i+1] = a
 	}
 
-	thrown, err := thread.Derive().Execute(vm.NewFrame(class, method).SetLocals(locals))
+	err = thread.Execute(vm.NewFrame(class, method).SetLocals(locals))
 	if err != nil {
 		return err
-	}
-	if thrown != nil {
-		return fmt.Errorf("constructor thrown exception %+v in NativeConstructorAccessorImpl.newInstance0", thrown)
 	}
 
 	thread.CurrentFrame().PushOperand(locals[0])
