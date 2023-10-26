@@ -41,7 +41,7 @@ func (e *JavaError) Error() string {
 }
 
 func (e *JavaError) Exception() *Instance {
-	return nil
+	return e.exception
 }
 
 /*func (e *JavaError) CreateException(thread *Thread) (*Instance, error) {

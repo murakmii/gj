@@ -2,6 +2,9 @@ package vm
 
 import (
 	"fmt"
+	"github.com/murakmii/gj/class_file"
+	"os"
+	"strings"
 	"unicode/utf16"
 )
 
@@ -27,7 +30,20 @@ func NewArray(vm *VM, desc string, size int) (*Instance, []interface{}) {
 	arrayClass, _ := vm.Class(desc, nil)
 	array := make([]interface{}, size)
 
-	return NewInstance(arrayClass).SetVMData(array), array
+	compType := desc[strings.LastIndex(desc, "[")+1:]
+	defaultVal := class_file.JavaTypeSignature(compType).DefaultValue()
+
+	if defaultVal != nil {
+		for i := range array {
+			array[i] = defaultVal
+		}
+	}
+
+	return &Instance{
+		class:   arrayClass,
+		fields:  array, // Array has elements in fields
+		monitor: NewMonitor(),
+	}, array
 }
 
 func (instance *Instance) Class() *Class {
@@ -43,6 +59,25 @@ func (instance *Instance) CompareAndSwapInt(id int, expected, x int) (bool, erro
 	target, ok := instance.fields[id].(int)
 	if !ok {
 		return false, fmt.Errorf("Instance.CompareAndSwapInt only suuport int value")
+	}
+
+	if target == expected {
+		instance.fields[id] = x
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (instance *Instance) CompareAndSwapLong(id int, expected, x int64) (bool, error) {
+	// TODO: lock
+	if instance.fields[id] == nil {
+		instance.fields[id] = int64(0)
+	}
+
+	target, ok := instance.fields[id].(int64)
+	if !ok {
+		return false, fmt.Errorf("Instance.CompareAndSwapLong only suuport int64 value")
 	}
 
 	if target == expected {
@@ -112,7 +147,22 @@ func (instance *Instance) SetVMData(data interface{}) *Instance {
 }
 
 func (instance *Instance) AsArray() []interface{} {
-	return instance.vmData.([]interface{})
+	return instance.fields
+}
+
+// For instance of java.io.FileDescriptor
+func (instance *Instance) AsFile() *os.File {
+	if instance.vmData != nil {
+		return instance.vmData.(*os.File)
+	}
+
+	fdName := "fd"
+	fdDesc := "I"
+	fd := instance.GetField(&fdName, &fdDesc).(int)
+	file := os.NewFile(uintptr(fd), "")
+
+	instance.vmData = file
+	return file
 }
 
 // Utility method to get value of char array field as string.

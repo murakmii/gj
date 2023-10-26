@@ -6,6 +6,7 @@ import (
 	"github.com/murakmii/gj/vm/native/java/lang"
 	"github.com/murakmii/gj/vm/native/java/security"
 	"github.com/murakmii/gj/vm/native/java/util/concurrent/atomic"
+	"github.com/murakmii/gj/vm/native/java/util/zip"
 	"github.com/murakmii/gj/vm/native/sun/misc"
 	"github.com/murakmii/gj/vm/native/sun/reflect"
 )
@@ -21,7 +22,11 @@ func init() {
 
 	vm.RegisterNativeMethod("java/io/FileDescriptor/initIDs()V", nop)
 
+	vm.RegisterNativeMethod("java/io/FileInputStream/available0()I", io.FileInputStreamAvailable0)
+	vm.RegisterNativeMethod("java/io/FileInputStream/close0()V", io.FileInputStreamClose0)
 	vm.RegisterNativeMethod("java/io/FileInputStream/initIDs()V", nop)
+	vm.RegisterNativeMethod("java/io/FileInputStream/open0(Ljava/lang/String;)V", io.FileInputStreamOpen0)
+	vm.RegisterNativeMethod("java/io/FileInputStream/readBytes([BII)I", io.FileInputStreamReadBytes)
 
 	vm.RegisterNativeMethod("java/io/FileOutputStream/initIDs()V", nop)
 	vm.RegisterNativeMethod("java/io/FileOutputStream/writeBytes([BIIZ)V", io.FileOutputStreamWriteBytes)
@@ -29,13 +34,18 @@ func init() {
 	vm.RegisterNativeMethod("java/io/UnixFileSystem/initIDs()V", nop)
 
 	vm.RegisterNativeMethod("java/lang/Class/desiredAssertionStatus0(Ljava/lang/Class;)Z", lang.ClassDesiredAssertionStatus0)
+	vm.RegisterNativeMethod("java/lang/Class/getComponentType()Ljava/lang/Class;", lang.ClassGetComponentType)
+	vm.RegisterNativeMethod("java/lang/Class/getDeclaringClass0()Ljava/lang/Class;", lang.ClassGetDeclaringClass0)
 	vm.RegisterNativeMethod("java/lang/Class/getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;", lang.ClassGetDeclaredConstructors)
 	vm.RegisterNativeMethod("java/lang/Class/getDeclaredFields0(Z)[Ljava/lang/reflect/Field;", lang.ClassGetDeclaredFields0)
+	vm.RegisterNativeMethod("java/lang/Class/getEnclosingMethod0()[Ljava/lang/Object;", lang.ClassGetEnclosingMethod0)
 	vm.RegisterNativeMethod("java/lang/Class/getModifiers()I", lang.ClassGetModifiers)
 	vm.RegisterNativeMethod("java/lang/Class/getName0()Ljava/lang/String;", lang.ClassGetName0)
 	vm.RegisterNativeMethod("java/lang/Class/getSuperclass()Ljava/lang/Class;", lang.ClassGetSuperClass)
+	vm.RegisterNativeMethod("java/lang/Class/isArray()Z", lang.ClassIsArray)
 	vm.RegisterNativeMethod("java/lang/Class/isAssignableFrom(Ljava/lang/Class;)Z", lang.ClassIsAssignableFrom)
 	vm.RegisterNativeMethod("java/lang/Class/isInterface()Z", lang.ClassIsInterface)
+	vm.RegisterNativeMethod("java/lang/Class/isInstance(Ljava/lang/Object;)Z", lang.ClassIsInstance)
 	vm.RegisterNativeMethod("java/lang/Class/isPrimitive()Z", lang.ClassIsPrimitive)
 	vm.RegisterNativeMethod("java/lang/Class/forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", lang.ClassForName0)
 	vm.RegisterNativeMethod("java/lang/Class/registerNatives()V", nop)
@@ -54,6 +64,8 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Object/hashCode()I", lang.ObjectHashCode)
 	vm.RegisterNativeMethod("java/lang/Object/wait(J)V", lang.ObjectWait)
 	vm.RegisterNativeMethod("java/lang/Object/notifyAll()V", lang.ObjectNotifyAll)
+
+	vm.RegisterNativeMethod("java/lang/Runtime/availableProcessors()I", lang.RuntimeGetAvailableProcessors)
 
 	vm.RegisterNativeMethod("java/lang/System/arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V", lang.SystemArrayCopy)
 	vm.RegisterNativeMethod("java/lang/System/currentTimeMillis()J", lang.SystemCurrentTimeMillis)
@@ -76,6 +88,8 @@ func init() {
 
 	vm.RegisterNativeMethod("java/util/concurrent/atomic/AtomicLong/VMSupportsCS8()Z", atomic.AtomicLongVMSupportsCS8)
 
+	vm.RegisterNativeMethod("java/util/zip/CRC32/updateBytes(I[BII)I", zip.CRC32UpdateBytes)
+
 	vm.RegisterNativeMethod("sun/misc/Unsafe/allocateMemory(J)J", misc.UnsafeAllocateMemory)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/freeMemory(J)V", misc.UnsafeFreeMemory)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/getByte(J)B", misc.UnsafeGetByteNativeMem)
@@ -84,8 +98,10 @@ func init() {
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayBaseOffset(Ljava/lang/Class;)I", misc.UnsafeArrayBaseOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/arrayIndexScale(Ljava/lang/Class;)I", misc.UnsafeArrayIndexScale)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/compareAndSwapInt(Ljava/lang/Object;JII)Z", misc.UnsafeCompareAndSwapInt)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/compareAndSwapLong(Ljava/lang/Object;JJJ)Z", misc.UnsafeCompareAndSwapLong)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z", misc.UnsafeCompareAndSwapObject)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/getIntVolatile(Ljava/lang/Object;J)I", misc.UnsafeGetIntVolatile)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;", misc.UnsafeGetObjectVolatile)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/objectFieldOffset(Ljava/lang/reflect/Field;)J", misc.UnsafeObjectFieldOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/registerNatives()V", nop)
 

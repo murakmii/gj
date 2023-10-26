@@ -107,7 +107,14 @@ func execVM(config *gj.Config) {
 		}
 
 		if result.Err != nil {
-			fmt.Printf("[VM] occurred error in thread '%s': %s\n", result.Thread.Name(), result.Err)
+			if javaErr := vm.UnwrapJavaError(result.Err); javaErr != nil {
+				fmt.Printf("[VM] unhandled exception in thread '%s': %s\n", result.Thread.Name(), javaErr)
+				for i, t := range javaErr.Exception().VMData().([]string) {
+					fmt.Println(strings.Repeat("  ", i) + t)
+				}
+			} else {
+				fmt.Printf("[VM] occurred error in thread '%s': %s\n", result.Thread.Name(), result.Err)
+			}
 		}
 	}
 

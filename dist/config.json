@@ -19,6 +19,7 @@
     "user.name": "{{ .USER }}",
     "user.home": "{{ .HOME }}",
     "user.dir": "{{ .WORKDIR }}",
+    "user.timezone": "Asia/Tokyo",
     "sun.stdout.encoding": "UTF-8",
     "sun.stderr.encoding": "UTF-8"
   }

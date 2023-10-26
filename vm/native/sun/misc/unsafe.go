@@ -74,6 +74,34 @@ func UnsafeCompareAndSwapInt(thread *vm.Thread, args []interface{}) error {
 	return nil
 }
 
+func UnsafeCompareAndSwapLong(thread *vm.Thread, args []interface{}) error {
+	obj, ok := args[1].(*vm.Instance)
+	if !ok {
+		return fmt.Errorf("Unsafe.compareAndSwapLong received arg[1] is NOT instance")
+	}
+
+	fID, ok := args[2].(int64)
+	if !ok {
+		return fmt.Errorf("Unsafe.compareAndSwapInt received arg[2] is NOT int64")
+	}
+
+	cmp := args[3].(int64)
+	set := args[4].(int64)
+
+	result, err := obj.CompareAndSwapLong(int(fID), cmp, set)
+	if err != nil {
+		return err
+	}
+
+	ret := 0
+	if result {
+		ret = 1
+	}
+
+	thread.CurrentFrame().PushOperand(ret)
+	return nil
+}
+
 func UnsafeCompareAndSwapObject(thread *vm.Thread, args []interface{}) error {
 	obj, ok := args[1].(*vm.Instance)
 	if !ok {
@@ -123,6 +151,14 @@ func UnsafeObjectFieldOffset(thread *vm.Thread, args []interface{}) error {
 	}
 
 	thread.CurrentFrame().PushOperand(int64(slot))
+	return nil
+}
+
+func UnsafeGetObjectVolatile(thread *vm.Thread, args []interface{}) error {
+	instance := args[1].(*vm.Instance)
+	offset := args[2].(int64)
+
+	thread.CurrentFrame().PushOperand(instance.GetFieldByID(int(offset)))
 	return nil
 }
 

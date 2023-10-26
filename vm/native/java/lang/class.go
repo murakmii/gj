@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"fmt"
 	"github.com/murakmii/gj/class_file"
 	"github.com/murakmii/gj/vm"
 	"strings"
@@ -12,10 +13,14 @@ func ClassDesiredAssertionStatus0(thread *vm.Thread, args []interface{}) error {
 	return nil
 }
 
-func ClassGetPrimitiveClass(thread *vm.Thread, _ []interface{}) error {
-	// TODO: generate class instance
-	// return null
-	thread.CurrentFrame().PushOperand(nil)
+func ClassGetPrimitiveClass(thread *vm.Thread, args []interface{}) error {
+	className := args[0].(*vm.Instance).GetCharArrayField("value")
+	class, err := thread.VM().Class(className, thread)
+	if err != nil {
+		return err
+	}
+
+	thread.CurrentFrame().PushOperand(class.Java())
 	return nil
 }
 
@@ -42,9 +47,25 @@ func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
 	return nil
 }
 
-func ClassIsInterface(thread *vm.Thread, args []interface{}) error {
+func ClassIsArray(thread *vm.Thread, args []interface{}) error {
 	className := args[0].(*vm.Instance).VMData().(*string)
 
+	class, err := thread.VM().Class(*className, thread)
+	if err != nil {
+		return err
+	}
+
+	ret := 0
+	if class.IsArray() {
+		ret = 1
+	}
+
+	thread.CurrentFrame().PushOperand(ret)
+	return nil
+}
+
+func ClassIsInterface(thread *vm.Thread, args []interface{}) error {
+	className := args[0].(*vm.Instance).VMData().(*string)
 	class, err := thread.VM().Class(*className, thread)
 	if err != nil {
 		return err
@@ -59,6 +80,18 @@ func ClassIsInterface(thread *vm.Thread, args []interface{}) error {
 	return nil
 }
 
+func ClassIsInstance(thread *vm.Thread, args []interface{}) error {
+	className := args[0].(*vm.Instance).VMData().(*string)
+
+	result := 0
+	if args[1].(*vm.Instance).Class().IsSubClassOf(className) {
+		result = 1
+	}
+
+	thread.CurrentFrame().PushOperand(result)
+	return nil
+}
+
 func ClassIsPrimitive(thread *vm.Thread, args []interface{}) error {
 	result := 0
 	if class_file.JavaTypeSignature(*(args[0].(*vm.Instance).VMData().(*string))).IsPrimitive() {
@@ -66,6 +99,19 @@ func ClassIsPrimitive(thread *vm.Thread, args []interface{}) error {
 	}
 
 	thread.CurrentFrame().PushOperand(result)
+	return nil
+}
+
+func ClassGetComponentType(thread *vm.Thread, args []interface{}) error {
+	className := args[0].(*vm.Instance).VMData().(*string)
+	component := class_file.FieldType((*className)[1:]).Type()
+
+	class, err := thread.VM().Class(component, thread)
+	if err != nil {
+		return err
+	}
+
+	thread.CurrentFrame().PushOperand(class.Java())
 	return nil
 }
 
@@ -258,4 +304,35 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 
 	thread.CurrentFrame().PushOperand(ret)
 	return nil
+}
+
+func ClassGetEnclosingMethod0(thread *vm.Thread, args []interface{}) error {
+	className := args[0].(*vm.Instance).VMData().(*string)
+	class, err := thread.VM().Class(*className, thread)
+	if err != nil {
+		return err
+	}
+
+	enc := class.File().EnclosingMethod()
+	if enc == nil {
+		thread.CurrentFrame().PushOperand(nil)
+		return nil
+	}
+
+	return fmt.Errorf("Class.getEnclosingMethod0 has NOT been implemented")
+}
+
+func ClassGetDeclaringClass0(thread *vm.Thread, args []interface{}) error {
+	className := args[0].(*vm.Instance).VMData().(*string)
+	class, err := thread.VM().Class(*className, thread)
+	if err != nil {
+		return err
+	}
+
+	if len(class.File().InnerClassesAttr()) == 0 {
+		thread.CurrentFrame().PushOperand(nil)
+		return nil
+	}
+
+	return fmt.Errorf("Class.getDeclaringClass0 has NOT been implemented")
 }

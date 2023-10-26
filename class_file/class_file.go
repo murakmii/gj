@@ -243,6 +243,24 @@ func (c *ClassFile) FindMethodByID(id int) *MethodInfo {
 	return c.methods[id]
 }
 
+func (c *ClassFile) EnclosingMethod() *EnclosingMethodAttr {
+	for _, attr := range c.attributes {
+		if enc, ok := attr.(*EnclosingMethodAttr); ok {
+			return enc
+		}
+	}
+	return nil
+}
+
+func (c *ClassFile) InnerClassesAttr() InnerClassesAttr {
+	for _, attr := range c.attributes {
+		if inner, ok := attr.(InnerClassesAttr); ok {
+			return inner
+		}
+	}
+	return nil
+}
+
 func (m *MethodInfo) IsCallableForInstance() bool {
 	return !m.accessFlag.Contain(StaticFlag) && !m.accessFlag.Contain(AbstractFlag)
 }

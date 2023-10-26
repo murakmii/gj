@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/murakmii/gj/class_file"
 	"math"
+	"strings"
 )
 
 type (
@@ -18,20 +19,23 @@ func init() {
 	InstructionSet[0x00] = func(_ *Thread, _ *Frame) error { return nil } // nop
 	InstructionSet[0x01] = instrAConstNull
 
-	InstructionSet[0x02] = instrIconst(-1)
-	InstructionSet[0x03] = instrIconst(0)
-	InstructionSet[0x04] = instrIconst(1)
-	InstructionSet[0x05] = instrIconst(2)
-	InstructionSet[0x06] = instrIconst(3)
-	InstructionSet[0x07] = instrIconst(4)
-	InstructionSet[0x08] = instrIconst(5)
+	InstructionSet[0x02] = instrConst[int](-1)
+	InstructionSet[0x03] = instrConst[int](0)
+	InstructionSet[0x04] = instrConst[int](1)
+	InstructionSet[0x05] = instrConst[int](2)
+	InstructionSet[0x06] = instrConst[int](3)
+	InstructionSet[0x07] = instrConst[int](4)
+	InstructionSet[0x08] = instrConst[int](5)
 
-	InstructionSet[0x09] = instrLConst(0)
-	InstructionSet[0x0A] = instrLConst(1)
+	InstructionSet[0x09] = instrConst[int64](0)
+	InstructionSet[0x0A] = instrConst[int64](1)
 
-	InstructionSet[0x0B] = instrFConst(0.0)
-	InstructionSet[0x0C] = instrFConst(1.0)
-	InstructionSet[0x0D] = instrFConst(2.0)
+	InstructionSet[0x0B] = instrConst[float32](0.0)
+	InstructionSet[0x0C] = instrConst[float32](1.0)
+	InstructionSet[0x0D] = instrConst[float32](2.0)
+
+	InstructionSet[0x0E] = instrConst[float64](0.0)
+	InstructionSet[0x0F] = instrConst[float64](1.0)
 
 	InstructionSet[0x10] = InstrBiPush
 	InstructionSet[0x11] = InstrSiPush
@@ -107,42 +111,55 @@ func init() {
 	InstructionSet[0x57] = InstrPop(1)
 	InstructionSet[0x58] = InstrPop(2)
 
-	InstructionSet[0x59] = instrDup(1, 0)
-	InstructionSet[0x5A] = instrDup(1, 1)
-	InstructionSet[0x5B] = instrDup(1, 2)
-	InstructionSet[0x5C] = instrDup(2, 0)
-	InstructionSet[0x5D] = instrDup(2, 1)
-	InstructionSet[0x5E] = instrDup(2, 2)
+	InstructionSet[0x59] = instrDup
+	InstructionSet[0x5A] = instrDupX1
+	InstructionSet[0x5B] = instrDupX2
+	InstructionSet[0x5C] = instrDup2
+	InstructionSet[0x5D] = instrDup2X1
+	InstructionSet[0x5E] = instrDup2X2
 
 	InstructionSet[0x60] = instrAdd[int]()
 	InstructionSet[0x61] = instrAdd[int64]()
 
+	InstructionSet[0x63] = instrBiOp[float64]("dadd", func(v1 float64, v2 float64) float64 { return v1 + v2 })
 	InstructionSet[0x64] = instrBiOp[int]("isub", func(v1 int, v2 int) int { return v1 - v2 })
 	InstructionSet[0x65] = instrBiOp[int64]("lsub", func(v1 int64, v2 int64) int64 { return v1 - v2 })
 	InstructionSet[0x68] = instrBiOp[int]("imul", func(v1 int, v2 int) int { return v1 * v2 })
-	InstructionSet[0x70] = instrBiOp[int]("irem", func(v1 int, v2 int) int { return v1 % v2 })
-
+	InstructionSet[0x69] = instrBiOp[int64]("lmul", func(v1 int64, v2 int64) int64 { return v1 * v2 })
 	InstructionSet[0x6A] = instrBiOp[float32]("fmul", func(v1 float32, v2 float32) float32 { return v1 * v2 })
+	InstructionSet[0x6C] = instrBiOp[int]("idiv", func(v1 int, v2 int) int { return v1 / v2 })
+	InstructionSet[0x6D] = instrBiOp[int64]("ldiv", func(v1 int64, v2 int64) int64 { return v1 / v2 })
+	InstructionSet[0x6E] = instrBiOp[float32]("fdiv", func(v1 float32, v2 float32) float32 { return v1 / v2 })
+	InstructionSet[0x70] = instrBiOp[int]("irem", func(v1 int, v2 int) int { return v1 % v2 })
+	InstructionSet[0x71] = instrBiOp[int64]("lrem", func(v1 int64, v2 int64) int64 { return v1 % v2 })
 
 	InstructionSet[0x78] = instrShiftLeft[int](0x1F)
 	InstructionSet[0x79] = instrShiftLeft[int64](0x3F)
-	InstructionSet[0x7A] = instrShiftRight[int](0x1F) // TODO: Arithmetic
-	InstructionSet[0x7B] = instrShiftRight[int64](0x3F)
+	InstructionSet[0x7A] = instrShiftRight[int](0x1F)   // TODO: Arithmetic
+	InstructionSet[0x7B] = instrShiftRight[int64](0x3F) // TODO: Arithmetic
 	InstructionSet[0x7C] = instrShiftRight[int](0x1F)
+	InstructionSet[0x7D] = instrShiftRight[int64](0x3F)
 
 	InstructionSet[0x7E] = instrAnd[int]
 	InstructionSet[0x7F] = instrAnd[int64]
 	InstructionSet[0x80] = instrBiOp[int]("ior", func(v1 int, v2 int) int { return v1 | v2 })
+	InstructionSet[0x81] = instrBiOp[int64]("lor", func(v1 int64, v2 int64) int64 { return v1 | v2 })
 	InstructionSet[0x82] = instrBiOp[int]("ixor", func(v1 int, v2 int) int { return v1 ^ v2 })
+	InstructionSet[0x83] = instrBiOp[int64]("lxor", func(v1 int64, v2 int64) int64 { return v1 ^ v2 })
 
 	InstructionSet[0x84] = instrIInc
 
 	InstructionSet[0x85] = InstrI2L
 	InstructionSet[0x86] = InstrI2F
+	InstructionSet[0x88] = InstrL2I
+	InstructionSet[0x89] = InstrL2F
 
 	InstructionSet[0x8B] = InstrF2I
+	InstructionSet[0x8D] = InstrF2D
+	InstructionSet[0x8F] = InstrD2L
 	InstructionSet[0x91] = instrI2B
 	InstructionSet[0x92] = instrI2C
+	InstructionSet[0x93] = instrI2S
 
 	InstructionSet[0x94] = instrLCmp
 	InstructionSet[0x95] = instrFCmp(-1)
@@ -167,6 +184,7 @@ func init() {
 
 	InstructionSet[0xA7] = instrGoTo
 
+	InstructionSet[0xAA] = instrTableSwitch
 	InstructionSet[0xAB] = instrLookupSwitch
 
 	InstructionSet[0xAC] = instrReturn
@@ -231,21 +249,7 @@ func instrAConstNull(thread *Thread, frame *Frame) error {
 	return nil
 }
 
-func instrIconst(n int) Instruction {
-	return func(_ *Thread, frame *Frame) error {
-		frame.PushOperand(n)
-		return nil
-	}
-}
-
-func instrLConst(n int64) Instruction {
-	return func(_ *Thread, frame *Frame) error {
-		frame.PushOperand(n)
-		return nil
-	}
-}
-
-func instrFConst(n float32) Instruction {
+func instrConst[T int | int64 | float32 | float64](n T) Instruction {
 	return func(_ *Thread, frame *Frame) error {
 		frame.PushOperand(n)
 		return nil
@@ -338,23 +342,133 @@ func InstrPop(n int) Instruction {
 	}
 }
 
-func instrDup(n, x int) Instruction {
-	return func(_ *Thread, frame *Frame) error {
-		top := make([]interface{}, n+x)
-		for i := len(top) - 1; i >= 0; i-- {
-			top[i] = frame.PopOperand()
-		}
+func instrDup(_ *Thread, frame *Frame) error {
+	value := frame.PopOperand()
+	frame.PushOperand(value)
+	frame.PushOperand(value)
 
-		for i := 0; i < n; i++ {
-			frame.PushOperand(top[x+i])
-		}
+	return nil
+}
 
-		for _, v := range top {
-			frame.PushOperand(v)
-		}
+func instrDupX1(_ *Thread, frame *Frame) error {
+	v1 := frame.PopOperand()
+	v2 := frame.PopOperand()
 
+	frame.PushOperand(v1)
+	frame.PushOperand(v2)
+	frame.PushOperand(v1)
+
+	return nil
+}
+
+func instrDupX2(_ *Thread, frame *Frame) error {
+	v1 := frame.PopOperand()
+	v2 := frame.PopOperand()
+
+	switch v2.(type) {
+	case int64, float64:
+		frame.PushOperand(v1)
+	default:
+		v3 := frame.PopOperand()
+		frame.PushOperand(v1)
+		frame.PushOperand(v3)
+	}
+
+	frame.PushOperand(v2)
+	frame.PushOperand(v1)
+
+	return nil
+}
+
+func instrDup2(_ *Thread, frame *Frame) error {
+	v1 := frame.PopOperand()
+
+	switch v1.(type) {
+	case int64, float64:
+		frame.PushOperand(v1)
+	default:
+		v2 := frame.PopOperand()
+		frame.PushOperand(v2)
+		frame.PushOperand(v1)
+		frame.PushOperand(v2)
+	}
+
+	frame.PushOperand(v1)
+	return nil
+}
+
+func instrDup2X1(_ *Thread, frame *Frame) error {
+	v1 := frame.PopOperand()
+	v2 := frame.PopOperand()
+
+	switch v1.(type) {
+	case int64, float64:
+		frame.PushOperand(v1)
+	default:
+		v3 := frame.PopOperand()
+		frame.PushOperand(v2)
+		frame.PushOperand(v1)
+		frame.PushOperand(v3)
+	}
+
+	frame.PushOperand(v2)
+	frame.PushOperand(v1)
+	return nil
+}
+
+func instrDup2X2(_ *Thread, frame *Frame) error {
+	v1 := frame.PopOperand()
+	v2 := frame.PopOperand()
+
+	v1cat2 := false
+	switch v1.(type) {
+	case int64, float64:
+		v1cat2 = true
+	}
+
+	v2cat2 := false
+	switch v2.(type) {
+	case int64, float64:
+		v2cat2 = true
+	}
+
+	if v1cat2 && v2cat2 {
+		frame.PushOperand(v1)
+		frame.PushOperand(v2)
+		frame.PushOperand(v1)
 		return nil
 	}
+
+	v3 := frame.PopOperand()
+
+	if v1cat2 {
+		frame.PushOperand(v1)
+		frame.PushOperand(v3)
+		frame.PushOperand(v2)
+		frame.PushOperand(v1)
+		return nil
+	}
+
+	switch v3.(type) {
+	case int64, float64:
+		frame.PushOperand(v2)
+		frame.PushOperand(v1)
+		frame.PushOperand(v3)
+		frame.PushOperand(v2)
+		frame.PushOperand(v1)
+		return nil
+	}
+
+	v4 := frame.PopOperand()
+
+	frame.PushOperand(v2)
+	frame.PushOperand(v1)
+	frame.PushOperand(v4)
+	frame.PushOperand(v3)
+	frame.PushOperand(v2)
+	frame.PushOperand(v1)
+
+	return nil
 }
 
 func instrAdd[T int | int64]() Instruction {
@@ -439,6 +553,26 @@ func InstrI2F(_ *Thread, frame *Frame) error {
 	return nil
 }
 
+func InstrL2I(_ *Thread, frame *Frame) error {
+	i, ok := frame.PopOperand().(int64)
+	if !ok {
+		return fmt.Errorf("popped value for l2i is NOT int64")
+	}
+
+	frame.PushOperand(int(i))
+	return nil
+}
+
+func InstrL2F(_ *Thread, frame *Frame) error {
+	i, ok := frame.PopOperand().(int64)
+	if !ok {
+		return fmt.Errorf("popped value for l2f is NOT int64")
+	}
+
+	frame.PushOperand(float32(i))
+	return nil
+}
+
 func InstrF2I(_ *Thread, frame *Frame) error {
 	f, ok := frame.PopOperand().(float32)
 	if !ok {
@@ -446,6 +580,26 @@ func InstrF2I(_ *Thread, frame *Frame) error {
 	}
 
 	frame.PushOperand(int(f))
+	return nil
+}
+
+func InstrF2D(_ *Thread, frame *Frame) error {
+	f, ok := frame.PopOperand().(float32)
+	if !ok {
+		return fmt.Errorf("popped value for f2d is NOT float32")
+	}
+
+	frame.PushOperand(float64(f))
+	return nil
+}
+
+func InstrD2L(_ *Thread, frame *Frame) error {
+	f, ok := frame.PopOperand().(float64)
+	if !ok {
+		return fmt.Errorf("popped value for d2l is NOT float64")
+	}
+
+	frame.PushOperand(int64(f))
 	return nil
 }
 
@@ -463,6 +617,16 @@ func instrI2C(_ *Thread, frame *Frame) error {
 	i, ok := frame.PopOperand().(int)
 	if !ok {
 		return fmt.Errorf("popped value for f2i is NOT float32")
+	}
+
+	frame.PushOperand(i & 0xFFFF)
+	return nil
+}
+
+func instrI2S(_ *Thread, frame *Frame) error {
+	i, ok := frame.PopOperand().(int)
+	if !ok {
+		return fmt.Errorf("popped value for i2s is NOT int")
 	}
 
 	frame.PushOperand(i & 0xFFFF)
@@ -628,10 +792,36 @@ func instrGoTo(_ *Thread, frame *Frame) error {
 	return nil
 }
 
+func instrTableSwitch(thread *Thread, frame *Frame) error {
+	frame.NextAlign(4)
+
+	defaultVal := int(frame.NextParamUint32())
+	low := int(frame.NextParamUint32())
+	high := int(frame.NextParamUint32())
+
+	fmt.Printf("tableswitch(%d) default=%d, low=%d, high=%d\n", frame.PC(), defaultVal, low, high)
+
+	index := frame.PopOperand().(int)
+	fmt.Printf("index=%d\n", index)
+	if index < low || index > high {
+		frame.JumpPC(frame.PC() + uint16(defaultVal))
+		return nil
+	}
+
+	offsets := make([]int, high-low+1)
+	for i := range offsets {
+		offsets[i] = int(frame.NextParamUint32())
+		fmt.Printf("offset[%02d] %d\n", i, offsets[i])
+	}
+
+	frame.JumpPC(frame.PC() + uint16(offsets[index-low]))
+	return nil
+}
+
 func instrLookupSwitch(_ *Thread, frame *Frame) error {
 	frame.NextAlign(4)
 
-	defaultVal := frame.NextParamUint32()
+	defaultVal := int(frame.NextParamUint32())
 	key := frame.PopOperand().(int)
 
 	for npairs := frame.NextParamUint32(); npairs > 0; npairs-- {
@@ -644,6 +834,7 @@ func instrLookupSwitch(_ *Thread, frame *Frame) error {
 		}
 	}
 
+	fmt.Printf("lookupswitch go to default = %d\n", frame.PC()+uint16(defaultVal))
 	frame.JumpPC(frame.PC() + uint16(defaultVal))
 	return nil
 }
@@ -722,6 +913,13 @@ func instrInvokeVirtual(thread *Thread, frame *Frame) error {
 		return thread.ExecMethod(resolvedClass, resolvedMethod)
 
 	default:
+		fmt.Printf("invokevirtual: %s.%s\n", *name, *desc)
+		for i, t := range thread.StackTrack() {
+			fmt.Println(strings.Repeat("  ", i) + t)
+		}
+
+		fmt.Printf("operand stack: %+v\nPC: %d\n", frame.opStack, frame.PC())
+
 		return fmt.Errorf("invokevirtual: receiver is invalid object: %+v", i)
 	}
 }

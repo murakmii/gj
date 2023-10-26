@@ -33,6 +33,20 @@ type (
 	RuntimeVisibleParameterAnnotationsAttr struct {
 		rawBytes []byte
 	}
+
+	EnclosingMethodAttr struct {
+		class  uint16
+		method uint16
+	}
+
+	InnerClassesAttr []*InnerClassInfo
+
+	InnerClassInfo struct {
+		class      uint16
+		outer      uint16
+		name       uint16
+		accessFlag AccessFlag
+	}
 )
 
 const (
@@ -89,7 +103,9 @@ func readAttribute(r *util.BinReader, cp *ConstantPool) interface{} {
 	case deprecatedAttr:
 		return DeprecatedAttr{}
 
-	//case enclosingMethodAttr:
+	case enclosingMethodAttr:
+		return &EnclosingMethodAttr{class: r.ReadUint16(), method: r.ReadUint16()}
+
 	case exceptionsAttr:
 		attr := ExceptionsAttr(make([]uint16, r.ReadUint16()))
 		for i := 0; i < len(attr); i++ {
@@ -97,7 +113,18 @@ func readAttribute(r *util.BinReader, cp *ConstantPool) interface{} {
 		}
 		return attr
 
-	//case innerClassesAttr:
+	case innerClassesAttr:
+		attr := InnerClassesAttr(make([]*InnerClassInfo, r.ReadUint16()))
+		for i := range attr {
+			attr[i] = &InnerClassInfo{
+				class:      r.ReadUint16(),
+				outer:      r.ReadUint16(),
+				name:       r.ReadUint16(),
+				accessFlag: AccessFlag(r.ReadUint16()),
+			}
+		}
+		return attr
+
 	//case lineNumberTableAttr:
 	//case localVariableTableAttr:
 	//case localVariableTypeTableAttr:
@@ -191,4 +218,24 @@ func (anno *RuntimeVisibleAnnotationsAttr) RawBytes() []byte {
 
 func (anno *RuntimeVisibleParameterAnnotationsAttr) RawBytes() []byte {
 	return anno.rawBytes
+}
+
+func (enc *EnclosingMethodAttr) Class() uint16 {
+	return enc.class
+}
+
+func (enc *EnclosingMethodAttr) Method() uint16 {
+	return enc.method
+}
+
+func (inner *InnerClassInfo) Class() uint16 {
+	return inner.class
+}
+
+func (inner *InnerClassInfo) Outer() uint16 {
+	return inner.outer
+}
+
+func (inner *InnerClassInfo) Name() uint16 {
+	return inner.name
 }

@@ -2,7 +2,6 @@ package io
 
 import (
 	"github.com/murakmii/gj/vm"
-	"os"
 )
 
 func FileOutputStreamWriteBytes(thread *vm.Thread, args []interface{}) error {
@@ -14,9 +13,6 @@ func FileOutputStreamWriteBytes(thread *vm.Thread, args []interface{}) error {
 	descriptorFieldDesc := "Ljava/io/FileDescriptor;"
 	descriptor := fos.GetField(&fdFieldName, &descriptorFieldDesc).(*vm.Instance)
 
-	fdFieldDesc := "I"
-	fd := descriptor.GetField(&fdFieldName, &fdFieldDesc).(int)
-
-	_, err := os.NewFile(uintptr(fd), "").Write(bytes)
+	_, err := descriptor.AsFile().Write(bytes)
 	return err
 }
