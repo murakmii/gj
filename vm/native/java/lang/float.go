@@ -12,6 +12,6 @@ func FloatFloatToRawIntBits(thread *vm.Thread, args []interface{}) error {
 		return fmt.Errorf("Float.floatToRawIntBits received not float(%+v)", args[0])
 	}
 
-	thread.CurrentFrame().PushOperand(int(math.Float32bits(float)))
+	thread.CurrentFrame().PushOperand(int32(math.Float32bits(float)))
 	return nil
 }

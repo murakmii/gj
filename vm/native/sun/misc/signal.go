@@ -18,7 +18,7 @@ func SignalFindSignal(thread *vm.Thread, args []interface{}) error {
 		sig = syscall.Signal(-1)
 	}
 
-	thread.CurrentFrame().PushOperand(int(sig.(syscall.Signal)))
+	thread.CurrentFrame().PushOperand(int32(sig.(syscall.Signal)))
 	return nil
 }
 

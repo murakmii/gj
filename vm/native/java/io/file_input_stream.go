@@ -10,7 +10,7 @@ import (
 // Return value of FileInputStream.available0 is approximate.
 // So, This native implementation always returns 1.
 func FileInputStreamAvailable0(thread *vm.Thread, args []interface{}) error {
-	thread.CurrentFrame().PushOperand(1)
+	thread.CurrentFrame().PushOperand(int32(1))
 	return nil
 }
 
@@ -40,7 +40,7 @@ func FileInputStreamOpen0(thread *vm.Thread, args []interface{}) error {
 	_, constr := fdClass.ResolveMethod("<init>", "(I)V")
 
 	fd := vm.NewInstance(fdClass)
-	if err = thread.Execute(vm.NewFrame(fdClass, constr).SetLocals([]interface{}{fd, int(file.Fd())})); err != nil {
+	if err = thread.Execute(vm.NewFrame(fdClass, constr).SetLocals([]interface{}{fd, int32(file.Fd())})); err != nil {
 		return err
 	}
 	fd.SetVMData(file)
@@ -59,8 +59,8 @@ func FileInputStreamReadBytes(thread *vm.Thread, args []interface{}) error {
 	fdDesc := "Ljava/io/FileDescriptor;"
 	file := args[0].(*vm.Instance).GetField(&fdName, &fdDesc).(*vm.Instance).AsFile()
 	dst := args[1].(*vm.Instance).AsArray()
-	off := args[2].(int)
-	size := args[3].(int)
+	off := int(args[2].(int32))
+	size := args[3].(int32)
 
 	buf := make([]byte, size)
 	n, err := file.Read(buf)
@@ -72,9 +72,9 @@ func FileInputStreamReadBytes(thread *vm.Thread, args []interface{}) error {
 	}
 
 	for i := 0; i < n; i++ {
-		dst[off+i] = int(buf[i])
+		dst[off+i] = int32(buf[i])
 	}
 
-	thread.CurrentFrame().PushOperand(n)
+	thread.CurrentFrame().PushOperand(int32(n))
 	return nil
 }

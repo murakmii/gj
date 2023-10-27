@@ -254,13 +254,13 @@ func (vm *VM) initializeMainThread() error {
 	mainJThread := NewInstance(tClass)
 	threadPriorityField := "priority"
 	threadPriorityFieldDesc := "I"
-	mainJThread.PutField(&threadPriorityField, &threadPriorityFieldDesc, 5)
+	mainJThread.PutField(&threadPriorityField, &threadPriorityFieldDesc, int32(5))
 	vm.mainThread.SetJavaThread(mainJThread)
 	mainJThread.SetVMData(vm.mainThread)
 
 	statusName := "threadStatus"
 	statusDesc := "I"
-	mainJThread.PutField(&statusName, &statusDesc, 4) // RUNNABLE
+	mainJThread.PutField(&statusName, &statusDesc, int32(4)) // RUNNABLE
 
 	frame = NewFrame(tClass, tClass.File().FindMethod("<init>", "(Ljava/lang/ThreadGroup;Ljava/lang/String;)V")).
 		SetLocals([]interface{}{mainJThread, mainTg, mainJs})

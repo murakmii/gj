@@ -65,7 +65,7 @@ func readCP(r *util.BinReader) *ConstantPool {
 			cp.cpInfo[i] = &s
 
 		case intTag:
-			cp.cpInfo[i] = int(r.ReadUint32())
+			cp.cpInfo[i] = int32(r.ReadUint32())
 
 		case floatTag:
 			cp.cpInfo[i] = math.Float32frombits(r.ReadUint32())

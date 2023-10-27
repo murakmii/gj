@@ -23,6 +23,6 @@ func ReflectionGetClassAccessFlags(thread *vm.Thread, args []interface{}) error 
 		return err
 	}
 
-	thread.CurrentFrame().PushOperand(int(class.File().AccessFlag()))
+	thread.CurrentFrame().PushOperand(int32(class.File().AccessFlag()))
 	return nil
 }

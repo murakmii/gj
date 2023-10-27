@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/murakmii/gj/class_file"
 	"sync"
-	"unsafe"
 )
 
 type (
@@ -136,28 +135,6 @@ func (thread *Thread) PushFrame(frame *Frame) {
 			syncObj = frame.Locals()[0].(*Instance)
 		}
 		syncObj.Monitor().Enter(thread, -1)
-	}
-
-	if *(frame.CurrentMethod().Name()) == "getLocaleServiceProvider" {
-		class := frame.Locals()[1].(*Instance)
-		fmt.Printf("getLocaleServiceProvider arg = %+v\n", *(class.VMData().(*string)))
-		_, gsn := class.Class().ResolveMethod("getSimpleName", "()Ljava/lang/String;")
-
-		if err := thread.Execute(NewFrame(class.Class(), gsn).SetLocals([]interface{}{class})); err != nil {
-			panic(err)
-		}
-
-		sn := thread.CurrentFrame().PopOperand().(*Instance)
-		fmt.Printf("getSimpleName = %s\n", sn.GetCharArrayField("value"))
-
-		_, hcMethod := sn.Class().ResolveMethod("hashCode", "()I")
-		if err := thread.Execute(NewFrame(sn.Class(), hcMethod).SetLocals([]interface{}{sn})); err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("int = %d, int32 = %d\n", unsafe.Sizeof(int(0)), unsafe.Sizeof(int32(0)))
-		hashCode := thread.CurrentFrame().PopOperand().(int)
-		fmt.Printf("%s hashCode = %d\n", sn.GetCharArrayField("value"), hashCode)
 	}
 
 	thread.frameStack = append(thread.frameStack, frame)

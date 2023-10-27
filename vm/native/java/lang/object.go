@@ -17,7 +17,7 @@ func ObjectHashCode(thread *vm.Thread, args []interface{}) error {
 		return fmt.Errorf("arg for Object.hashCode is NOT instance")
 	}
 
-	thread.CurrentFrame().PushOperand(int(uintptr(unsafe.Pointer(instance))))
+	thread.CurrentFrame().PushOperand(int32(uintptr(unsafe.Pointer(instance))))
 	return nil
 }
 

@@ -8,13 +8,13 @@ import (
 
 func SystemArrayCopy(thread *vm.Thread, args []interface{}) error {
 	src := args[0].(*vm.Instance).AsArray()
-	srcStart := args[1].(int)
+	srcStart := args[1].(int32)
 	dst := args[2].(*vm.Instance).AsArray()
-	dstStart := args[3].(int)
-	count := args[4].(int)
+	dstStart := args[3].(int32)
+	count := args[4].(int32)
 
 	// TODO: copy
-	for i := 0; i < count; i++ {
+	for i := int32(0); i < count; i++ {
 		dst[dstStart+i] = src[srcStart+i]
 	}
 

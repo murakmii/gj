@@ -50,13 +50,13 @@ func (instance *Instance) Class() *Class {
 	return instance.class
 }
 
-func (instance *Instance) CompareAndSwapInt(id int, expected, x int) (bool, error) {
+func (instance *Instance) CompareAndSwapInt(id int, expected, x int32) (bool, error) {
 	// TODO: lock
 	if instance.fields[id] == nil {
-		instance.fields[id] = 0
+		instance.fields[id] = int32(0)
 	}
 
-	target, ok := instance.fields[id].(int)
+	target, ok := instance.fields[id].(int32)
 	if !ok {
 		return false, fmt.Errorf("Instance.CompareAndSwapInt only suuport int value")
 	}
@@ -158,7 +158,7 @@ func (instance *Instance) AsFile() *os.File {
 
 	fdName := "fd"
 	fdDesc := "I"
-	fd := instance.GetField(&fdName, &fdDesc).(int)
+	fd := instance.GetField(&fdName, &fdDesc).(int32)
 	file := os.NewFile(uintptr(fd), "")
 
 	instance.vmData = file
@@ -173,7 +173,7 @@ func (instance *Instance) GetCharArrayField(name string) string {
 
 	u16 := make([]uint16, len(slice))
 	for i := 0; i < len(slice); i++ {
-		u16[i] = uint16(slice[i].(int))
+		u16[i] = uint16(slice[i].(int32))
 	}
 
 	return string(utf16.Decode(u16))

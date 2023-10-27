@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-func ClassDesiredAssertionStatus0(thread *vm.Thread, args []interface{}) error {
+func ClassDesiredAssertionStatus0(thread *vm.Thread, _ []interface{}) error {
 	// return false
-	thread.CurrentFrame().PushOperand(0)
+	thread.CurrentFrame().PushOperand(int32(0))
 	return nil
 }
 
@@ -29,7 +29,7 @@ func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
 	argName := args[1].(*vm.Instance).VMData().(*string)
 
 	if (*thisName)[0] != 'L' || (*argName)[0] != 'L' {
-		thread.CurrentFrame().PushOperand(0)
+		thread.CurrentFrame().PushOperand(int32(0))
 		return nil
 	}
 
@@ -38,7 +38,7 @@ func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
 		return err
 	}
 
-	result := 0
+	var result int32
 	if argClass.IsSubClassOf(thisName) || argClass.Implements(thisName) {
 		result = 1
 	}
@@ -55,7 +55,7 @@ func ClassIsArray(thread *vm.Thread, args []interface{}) error {
 		return err
 	}
 
-	ret := 0
+	var ret int32
 	if class.IsArray() {
 		ret = 1
 	}
@@ -71,7 +71,7 @@ func ClassIsInterface(thread *vm.Thread, args []interface{}) error {
 		return err
 	}
 
-	result := 0
+	var result int32
 	if class.File().AccessFlag().Contain(class_file.InterfaceFlag) {
 		result = 1
 	}
@@ -83,7 +83,7 @@ func ClassIsInterface(thread *vm.Thread, args []interface{}) error {
 func ClassIsInstance(thread *vm.Thread, args []interface{}) error {
 	className := args[0].(*vm.Instance).VMData().(*string)
 
-	result := 0
+	var result int32
 	if args[1].(*vm.Instance).Class().IsSubClassOf(className) {
 		result = 1
 	}
@@ -93,7 +93,7 @@ func ClassIsInstance(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassIsPrimitive(thread *vm.Thread, args []interface{}) error {
-	result := 0
+	var result int32
 	if class_file.JavaTypeSignature(*(args[0].(*vm.Instance).VMData().(*string))).IsPrimitive() {
 		result = 1
 	}
@@ -121,7 +121,7 @@ func ClassGetModifiers(thread *vm.Thread, args []interface{}) error {
 		return err
 	}
 
-	thread.CurrentFrame().PushOperand(int(class.File().AccessFlag()))
+	thread.CurrentFrame().PushOperand(int32(class.File().AccessFlag()))
 	return nil
 }
 
@@ -177,7 +177,7 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 		return err
 	}
 
-	pubOnly := args[1].(int) == 1
+	pubOnly := args[1].(int32) == 1
 	cstrs := make([]*class_file.MethodInfo, 0)
 	for _, m := range class.File().AllMethods() {
 		if (*m.Name()) == "<init>" && (!pubOnly || m.IsPublic()) {
@@ -230,8 +230,8 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 			args[0],
 			pArray,
 			eArray,
-			int(c.AccessFlag()),
-			c.ID(),
+			int32(c.AccessFlag()),
+			int32(c.ID()),
 			signature,
 			vm.ByteSliceToJavaArray(thread.VM(), c.RawAnnotations()),
 			vm.ByteSliceToJavaArray(thread.VM(), c.RawParamAnnotations()),
@@ -249,7 +249,7 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 
 func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 	class := args[0].(*vm.Instance)
-	pubOnly := args[1].(int) == 1
+	pubOnly := args[1].(int32) == 1
 
 	targetClass, err := thread.VM().Class(*(class.VMData().(*string)), thread)
 	if err != nil {
@@ -290,8 +290,8 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 			class,
 			thread.VM().JavaString2(thread, f.Name()),
 			descClass.Java(),
-			int(f.AccessFlag()),
-			f.ID(),
+			int32(f.AccessFlag()),
+			int32(f.ID()),
 			signature,
 			vm.ByteSliceToJavaArray(thread.VM(), f.RawAnnotations()),
 		}))

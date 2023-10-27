@@ -16,7 +16,7 @@ func NativeConstructorAccessorImplNewInstance0(thread *vm.Thread, args []interfa
 
 	slotName := "slot"
 	slotDesc := "I"
-	method := class.File().FindMethodByID(cstr.GetField(&slotName, &slotDesc).(int))
+	method := class.File().FindMethodByID(int(cstr.GetField(&slotName, &slotDesc).(int32)))
 
 	var cstrArgs []interface{}
 	if args[1] != nil {

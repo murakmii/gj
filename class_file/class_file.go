@@ -432,7 +432,7 @@ func (s JavaTypeSignature) IsArray() bool {
 func (s JavaTypeSignature) DefaultValue() interface{} {
 	switch s[0] {
 	case 'B', 'C', 'I', 'S', 'Z':
-		return 0
+		return int32(0)
 	case 'F':
 		return float32(0.0)
 	case 'J':

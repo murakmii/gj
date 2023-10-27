@@ -12,7 +12,7 @@ func ThreadCurrentThread(thread *vm.Thread, args []interface{}) error {
 
 func ThreadIsAlive(thread *vm.Thread, args []interface{}) error {
 	targetThread := args[0].(*vm.Instance).VMData()
-	alive := 0
+	var alive int32
 	if targetThread != nil && targetThread.(*vm.Thread).IsAlive() {
 		alive = 1
 	}
@@ -26,7 +26,7 @@ func ThreadStart0(thread *vm.Thread, args []interface{}) error {
 
 	daemonName := "daemon"
 	daemonDesc := "Z"
-	daemon := jThread.GetField(&daemonName, &daemonDesc).(int)
+	daemon := jThread.GetField(&daemonName, &daemonDesc).(int32)
 
 	nameName := "name"
 	nameDesc := "Ljava/lang/String;"

@@ -27,22 +27,22 @@ func UnsafePutLongNativeMem(thread *vm.Thread, args []interface{}) error {
 
 func UnsafeGetByteNativeMem(thread *vm.Thread, args []interface{}) error {
 	thread.CurrentFrame().PushOperand(
-		int(thread.VM().NativeMem().Ref(args[1].(int64))[0]))
+		int32(thread.VM().NativeMem().Ref(args[1].(int64))[0]))
 	return nil
 }
 
 func UnsafeAddressSize(thread *vm.Thread, _ []interface{}) error {
-	thread.CurrentFrame().PushOperand(int(unsafe.Sizeof(uintptr(0))))
+	thread.CurrentFrame().PushOperand(int32(unsafe.Sizeof(uintptr(0))))
 	return nil
 }
 
 func UnsafeArrayBaseOffset(thread *vm.Thread, _ []interface{}) error {
-	thread.CurrentFrame().PushOperand(0)
+	thread.CurrentFrame().PushOperand(int32(0))
 	return nil
 }
 
 func UnsafeArrayIndexScale(thread *vm.Thread, _ []interface{}) error {
-	thread.CurrentFrame().PushOperand(1)
+	thread.CurrentFrame().PushOperand(int32(1))
 	return nil
 }
 
@@ -57,15 +57,15 @@ func UnsafeCompareAndSwapInt(thread *vm.Thread, args []interface{}) error {
 		return fmt.Errorf("Unsafe.compareAndSwapInt received arg[2] is NOT int64")
 	}
 
-	cmp := args[3].(int)
-	set := args[4].(int)
+	cmp := args[3].(int32)
+	set := args[4].(int32)
 
 	result, err := obj.CompareAndSwapInt(int(fID), cmp, set)
 	if err != nil {
 		return err
 	}
 
-	ret := 0
+	var ret int32
 	if result {
 		ret = 1
 	}
@@ -93,7 +93,7 @@ func UnsafeCompareAndSwapLong(thread *vm.Thread, args []interface{}) error {
 		return err
 	}
 
-	ret := 0
+	var ret int32
 	if result {
 		ret = 1
 	}
@@ -128,7 +128,7 @@ func UnsafeCompareAndSwapObject(thread *vm.Thread, args []interface{}) error {
 		return err
 	}
 
-	ret := 0
+	var ret int32
 	if result {
 		ret = 1
 	}
@@ -145,7 +145,7 @@ func UnsafeObjectFieldOffset(thread *vm.Thread, args []interface{}) error {
 
 	slotName := "slot"
 	slotDesc := "I"
-	slot, ok := fieldInstance.GetField(&slotName, &slotDesc).(int)
+	slot, ok := fieldInstance.GetField(&slotName, &slotDesc).(int32)
 	if !ok {
 		return fmt.Errorf("can't get slot in Unsafe.objectFieldOffset")
 	}
@@ -166,10 +166,10 @@ func UnsafeGetIntVolatile(thread *vm.Thread, args []interface{}) error {
 	instance := args[1].(*vm.Instance)
 	value := instance.GetFieldByID(int(args[2].(int64)))
 
-	result := 0
+	var result int32
 	var ok bool
 	if value != nil {
-		result, ok = value.(int)
+		result, ok = value.(int32)
 		if !ok {
 			return fmt.Errorf("fetched value is NOT int(%+v) in Unsafe.getIntVolatile", value)
 		}
