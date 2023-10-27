@@ -50,21 +50,21 @@ func InitVM(config *gj.Config) (*VM, error) {
 		return nil, err
 	}
 
-	classes, err := vm.initializeClasses([]string{JavaLangObject.String(), JavaLangString.String(), "java/lang/System", JavaLangClass.String()})
+	classes, err := vm.initializeClasses([]string{JavaLangObject.String(), JavaLangString.String(), "java/lang/StackTraceElement", "java/lang/System", JavaLangClass.String()})
 	if err != nil {
 		return nil, err
 	}
 
 	vm.stdClass[JavaLangObject] = classes[0]
 	vm.stdClass[JavaLangString] = classes[1]
-	vm.stdClass[JavaLangClass] = classes[3]
+	vm.stdClass[JavaLangClass] = classes[4]
 
 	for _, class := range vm.classCache {
 		class.InitJava(vm)
 	}
 
 	// Disable native library loading. Return(0xB1) immediately
-	classes[2].File().FindMethod("loadLibrary", "(Ljava/lang/String;)V").
+	classes[3].File().FindMethod("loadLibrary", "(Ljava/lang/String;)V").
 		Code().OverrideCode([]byte{0xB1})
 
 	_, err = vm.initializeClasses([]string{"java/lang/ThreadGroup", "java/lang/Thread"})
@@ -167,7 +167,7 @@ func (vm *VM) JavaString2(thread *Thread, s *string) *Instance {
 		return cache
 	}
 
-	js := GoString(*s).ToJavaString(thread)
+	js := GoString(*s).ToJavaString(vm)
 	vm.javaStringCache[*s] = js
 	return js
 }
@@ -178,7 +178,7 @@ func (vm *VM) JavaString(thread *Thread, s *string) (*Instance, error) {
 		return cache, nil
 	}
 
-	js := GoString(*s).ToJavaString(thread)
+	js := GoString(*s).ToJavaString(vm)
 	vm.javaStringCache[*s] = js
 	return js, nil
 }
@@ -196,7 +196,7 @@ func (vm *VM) ExecMain(className string, args []string) error {
 
 	array, slice := NewArray(vm, "[Ljava/lang/String;", len(args))
 	for i := range slice {
-		slice[i] = GoString(args[i]).ToJavaString(vm.mainThread)
+		slice[i] = GoString(args[i]).ToJavaString(vm)
 	}
 
 	vm.executor.Start(vm.mainThread, NewFrame(class, main).SetLocal(0, array))

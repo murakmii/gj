@@ -11,11 +11,11 @@ var (
 	javaLangStringValueDesc  = "[C"
 )
 
-func (s GoString) ToJavaString(thread *Thread) *Instance {
-	js := NewInstance(thread.VM().StdClass(JavaLangString))
+func (s GoString) ToJavaString(vm *VM) *Instance {
+	js := NewInstance(vm.StdClass(JavaLangString))
 
 	u16 := utf16.Encode([]rune(s))
-	instance, slice := NewArray(thread.VM(), "[C", len(u16))
+	instance, slice := NewArray(vm, "[C", len(u16))
 
 	for i, e := range u16 {
 		slice[i] = int32(e)

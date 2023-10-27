@@ -1,6 +1,9 @@
 package vm
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type JavaError struct {
 	message   string
@@ -33,7 +36,25 @@ func NewJavaErr(exception *Instance) error {
 }
 
 func CreateJavaError(thread *Thread, className, message string) error {
-	return nil
+	exClass, err := thread.VM().Class(className, thread)
+	if err != nil {
+		return err
+	}
+
+	constrClass, constr := exClass.ResolveMethod("<init>", "(Ljava/lang/String;)V")
+	if constr == nil {
+		return fmt.Errorf("failed to resolve exception constructor for %s", className)
+	}
+
+	ex := NewInstance(exClass)
+	err = thread.Execute(NewFrame(constrClass, constr).SetLocals([]interface{}{
+		ex, GoString(message).ToJavaString(thread.VM()),
+	}))
+	if err != nil {
+		return err
+	}
+
+	return &JavaError{message: message, exception: ex}
 }
 
 func (e *JavaError) Error() string {

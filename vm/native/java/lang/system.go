@@ -26,6 +26,10 @@ func SystemCurrentTimeMillis(thread *vm.Thread, _ []interface{}) error {
 	return nil
 }
 
+func SystemIdentityHashCode(thread *vm.Thread, args []interface{}) error {
+	return ObjectHashCode(thread, args)
+}
+
 func SystemNanoTime(thread *vm.Thread, _ []interface{}) error {
 	thread.CurrentFrame().PushOperand(time.Now().UnixNano())
 	return nil

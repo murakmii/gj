@@ -6,6 +6,6 @@ import (
 )
 
 func RuntimeGetAvailableProcessors(thread *vm.Thread, _ []interface{}) error {
-	thread.CurrentFrame().PushOperand(runtime.NumCPU())
+	thread.CurrentFrame().PushOperand(int32(runtime.NumCPU()))
 	return nil
 }

@@ -194,7 +194,7 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 		var signature *vm.Instance
 		sig, ok := c.Signature()
 		if ok {
-			signature = vm.GoString(*class.File().ConstantPool().Utf8(uint16(sig))).ToJavaString(thread)
+			signature = vm.GoString(*class.File().ConstantPool().Utf8(uint16(sig))).ToJavaString(thread.VM())
 		}
 
 		params := c.Descriptor().Params()
@@ -272,7 +272,7 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 		var signature *vm.Instance
 		sig, ok := f.Signature()
 		if ok {
-			signature = vm.GoString(*targetClass.File().ConstantPool().Utf8(uint16(sig))).ToJavaString(thread)
+			signature = vm.GoString(*targetClass.File().ConstantPool().Utf8(uint16(sig))).ToJavaString(thread.VM())
 		}
 
 		descClass, err := thread.VM().Class(f.Descriptor().Type(), thread)

@@ -16,6 +16,13 @@ type (
 		pc        uint16
 		syncObj   *Instance
 	}
+
+	StackTraceElement struct {
+		class  string
+		method string
+		file   *string
+		line   int32
+	}
 )
 
 func NewFrame(curClass *Class, curMethod *class_file.MethodInfo) *Frame {
@@ -146,4 +153,58 @@ func (frame *Frame) FindCurrentExceptionHandler(thrown *Instance) *uint16 {
 		}
 	}
 	return nil
+}
+
+func (frame *Frame) Trace() *StackTraceElement {
+	var file *string
+	fileAttr := frame.curClass.File().SourceFile()
+	if fileAttr != 0 {
+		file = frame.curClass.File().ConstantPool().Utf8(uint16(fileAttr))
+	}
+
+	line := int32(-1)
+	table := frame.curMethod.Code().LineNumberTable()
+	if table != nil && table[frame.pc] > 0 {
+		line = int32(table[frame.pc])
+	}
+
+	return NewStackTraceElement(
+		frame.curClass.File().ThisClass(),
+		*(frame.curMethod.Name()),
+		file,
+		line,
+	)
+}
+
+func NewStackTraceElement(class, method string, file *string, line int32) *StackTraceElement {
+	return &StackTraceElement{
+		class:  class,
+		method: method,
+		file:   file,
+		line:   line,
+	}
+}
+
+func (trace *StackTraceElement) ToJava(vm *VM) *Instance {
+	traceClass, _ := vm.Class("java/lang/StackTraceElement", nil)
+
+	javaTrace := NewInstance(traceClass)
+
+	strDesc := "Ljava/lang/String;"
+	className := "declaringClass"
+	javaTrace.PutField(&className, &strDesc, GoString(trace.class).ToJavaString(vm))
+
+	methodName := "methodName"
+	javaTrace.PutField(&methodName, &strDesc, GoString(trace.method).ToJavaString(vm))
+
+	if trace.file != nil {
+		fileName := "fileName"
+		javaTrace.PutField(&fileName, &strDesc, GoString(*trace.file).ToJavaString(vm))
+	}
+
+	lineName := "lineNumber"
+	lineDesc := "I"
+	javaTrace.PutField(&lineName, &lineDesc, trace.line)
+
+	return javaTrace
 }

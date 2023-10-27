@@ -178,3 +178,12 @@ func UnsafeGetIntVolatile(thread *vm.Thread, args []interface{}) error {
 	thread.CurrentFrame().PushOperand(result)
 	return nil
 }
+
+func UnsafePutObjectVolatile(thread *vm.Thread, args []interface{}) error {
+	instance := args[1].(*vm.Instance)
+	offset := args[2].(int64)
+	value := args[3]
+
+	instance.PutFieldByID(int(offset), value)
+	return nil
+}

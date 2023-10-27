@@ -243,6 +243,15 @@ func (c *ClassFile) FindMethodByID(id int) *MethodInfo {
 	return c.methods[id]
 }
 
+func (c *ClassFile) SourceFile() SourceFileAttr {
+	for _, attr := range c.attributes {
+		if sf, ok := attr.(SourceFileAttr); ok {
+			return sf
+		}
+	}
+	return 0
+}
+
 func (c *ClassFile) EnclosingMethod() *EnclosingMethodAttr {
 	for _, attr := range c.attributes {
 		if enc, ok := attr.(*EnclosingMethodAttr); ok {

@@ -109,9 +109,9 @@ func execVM(config *gj.Config) {
 		if result.Err != nil {
 			if javaErr := vm.UnwrapJavaError(result.Err); javaErr != nil {
 				fmt.Printf("[VM] unhandled exception in thread '%s': %s\n", result.Thread.Name(), javaErr)
-				for i, t := range javaErr.Exception().VMData().([]string) {
-					fmt.Println(strings.Repeat("  ", i) + t)
-				}
+				exClass, printMethod := javaErr.Exception().Class().ResolveMethod("printStackTrace", "()V")
+				result.Thread.Execute(vm.NewFrame(exClass, printMethod).SetLocals([]interface{}{javaErr.Exception()}))
+				//os.Stderr.WriteString("\n")
 			} else {
 				fmt.Printf("[VM] occurred error in thread '%s': %s\n", result.Thread.Name(), result.Err)
 			}

@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"fmt"
 	"github.com/murakmii/gj/class_file"
 	"sync"
 )
@@ -115,14 +114,12 @@ func (thread *Thread) ExecMethod(class *Class, method *class_file.MethodInfo) er
 	return nil
 }
 
-func (thread *Thread) StackTrack() []string {
-	var trace []string
-
-	for _, f := range thread.frameStack {
-		trace = append(trace, fmt.Sprintf("%s.%s:%s", f.curClass.File().ThisClass(), *f.curMethod.Name(), f.curMethod.Descriptor()))
+func (thread *Thread) StackTrack() []*StackTraceElement {
+	st := make([]*StackTraceElement, len(thread.frameStack))
+	for i := range st {
+		st[i] = thread.frameStack[i].Trace()
 	}
-
-	return trace
+	return st
 }
 
 func (thread *Thread) PushFrame(frame *Frame) {

@@ -4,6 +4,7 @@ import (
 	"github.com/murakmii/gj/vm"
 	"github.com/murakmii/gj/vm/native/java/io"
 	"github.com/murakmii/gj/vm/native/java/lang"
+	langRef "github.com/murakmii/gj/vm/native/java/lang/reflect"
 	"github.com/murakmii/gj/vm/native/java/security"
 	"github.com/murakmii/gj/vm/native/java/util/concurrent/atomic"
 	"github.com/murakmii/gj/vm/native/java/util/zip"
@@ -34,6 +35,7 @@ func init() {
 	vm.RegisterNativeMethod("java/io/FileOutputStream/writeBytes([BIIZ)V", io.FileOutputStreamWriteBytes)
 
 	vm.RegisterNativeMethod("java/io/UnixFileSystem/canonicalize0(Ljava/lang/String;)Ljava/lang/String;", io.UnixFileSystemCanonicalize0)
+	vm.RegisterNativeMethod("java/io/UnixFileSystem/checkAccess(Ljava/io/File;I)Z", io.UnixFileSystemCheckAccess)
 	vm.RegisterNativeMethod("java/io/UnixFileSystem/getBooleanAttributes0(Ljava/io/File;)I", io.UnixFileSystemGetBooleanAttributes0)
 	vm.RegisterNativeMethod("java/io/UnixFileSystem/initIDs()V", nop)
 
@@ -76,6 +78,7 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/System/arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V", lang.SystemArrayCopy)
 	vm.RegisterNativeMethod("java/lang/System/currentTimeMillis()J", lang.SystemCurrentTimeMillis)
 	vm.RegisterNativeMethod("java/lang/System/nanoTime()J", lang.SystemNanoTime)
+	vm.RegisterNativeMethod("java/lang/System/identityHashCode(Ljava/lang/Object;)I", lang.SystemIdentityHashCode)
 	vm.RegisterNativeMethod("java/lang/System/initProperties(Ljava/util/Properties;)Ljava/util/Properties;", lang.SystemInitProperties)
 	vm.RegisterNativeMethod("java/lang/System/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/System/setIn0(Ljava/io/InputStream;)V", lang.SystemSetArg0ToField("in", "Ljava/io/InputStream;"))
@@ -92,6 +95,10 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Thread/setPriority0(I)V", nop)
 
 	vm.RegisterNativeMethod("java/lang/Throwable/fillInStackTrace(I)Ljava/lang/Throwable;", lang.ThrowableFillInStackTrace)
+	vm.RegisterNativeMethod("java/lang/Throwable/getStackTraceDepth()I", lang.ThrowableGetStackTraceDepth)
+	vm.RegisterNativeMethod("java/lang/Throwable/getStackTraceElement(I)Ljava/lang/StackTraceElement;", lang.ThrowableGetStackTraceElement)
+
+	vm.RegisterNativeMethod("java/lang/reflect/Array/newArray(Ljava/lang/Class;I)Ljava/lang/Object;", langRef.ArrayNewArray)
 
 	vm.RegisterNativeMethod("java/util/concurrent/atomic/AtomicLong/VMSupportsCS8()Z", atomic.AtomicLongVMSupportsCS8)
 
@@ -109,6 +116,7 @@ func init() {
 	vm.RegisterNativeMethod("sun/misc/Unsafe/compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z", misc.UnsafeCompareAndSwapObject)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/getIntVolatile(Ljava/lang/Object;J)I", misc.UnsafeGetIntVolatile)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;", misc.UnsafeGetObjectVolatile)
+	vm.RegisterNativeMethod("sun/misc/Unsafe/putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V", misc.UnsafePutObjectVolatile)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/objectFieldOffset(Ljava/lang/reflect/Field;)J", misc.UnsafeObjectFieldOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/registerNatives()V", nop)
 

@@ -3,6 +3,7 @@ package io
 import (
 	"github.com/murakmii/gj/vm"
 	"os"
+	"syscall"
 )
 
 const (
@@ -14,6 +15,22 @@ const (
 
 func UnixFileSystemCanonicalize0(thread *vm.Thread, args []interface{}) error {
 	thread.CurrentFrame().PushOperand(args[1]) // nop
+	return nil
+}
+
+func UnixFileSystemCheckAccess(thread *vm.Thread, args []interface{}) error {
+	file := args[1].(*vm.Instance)
+
+	pathName := "path"
+	pathDesc := "Ljava/lang/String;"
+	path := file.GetField(&pathName, &pathDesc).(*vm.Instance).GetCharArrayField("value")
+
+	ret := int32(1)
+	if err := syscall.Access(path, uint32(args[2].(int32))); err != nil {
+		ret = 0
+	}
+
+	thread.CurrentFrame().PushOperand(ret)
 	return nil
 }
 

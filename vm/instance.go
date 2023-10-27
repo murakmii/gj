@@ -133,6 +133,10 @@ func (instance *Instance) PutField(name, desc *string, value interface{}) {
 	instance.fields[field.ID()] = value
 }
 
+func (instance *Instance) PutFieldByID(id int, value interface{}) {
+	instance.fields[id] = value
+}
+
 func (instance *Instance) Monitor() *Monitor {
 	return instance.monitor
 }

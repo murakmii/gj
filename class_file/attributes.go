@@ -47,6 +47,8 @@ type (
 		name       uint16
 		accessFlag AccessFlag
 	}
+
+	LineNumberTableAttr map[uint16]uint16
 )
 
 const (
@@ -125,7 +127,15 @@ func readAttribute(r *util.BinReader, cp *ConstantPool) interface{} {
 		}
 		return attr
 
-	//case lineNumberTableAttr:
+	case lineNumberTableAttr:
+		n := r.ReadUint16()
+		attr := make(LineNumberTableAttr, n)
+		for i := uint16(0); i < n; i++ {
+			pc := r.ReadUint16()
+			attr[pc] = r.ReadUint16()
+		}
+		return attr
+
 	//case localVariableTableAttr:
 	//case localVariableTypeTableAttr:
 	//case methodParametersAttr:
@@ -180,20 +190,29 @@ func readCodeAttr(r *util.BinReader, cp *ConstantPool) interface{} {
 	return attr
 }
 
-func (attr *CodeAttr) MaxLocals() uint16 {
-	return attr.maxLocals
+func (ca *CodeAttr) MaxLocals() uint16 {
+	return ca.maxLocals
 }
 
-func (attr *CodeAttr) Code() []byte {
-	return attr.code
+func (ca *CodeAttr) Code() []byte {
+	return ca.code
 }
 
-func (attr *CodeAttr) OverrideCode(code []byte) {
-	attr.code = code
+func (ca *CodeAttr) OverrideCode(code []byte) {
+	ca.code = code
 }
 
-func (attr *CodeAttr) ExceptionTable() []*ExceptionTable {
-	return attr.exceptionTables
+func (ca *CodeAttr) ExceptionTable() []*ExceptionTable {
+	return ca.exceptionTables
+}
+
+func (ca *CodeAttr) LineNumberTable() LineNumberTableAttr {
+	for _, attr := range ca.attributes {
+		if table, ok := attr.(LineNumberTableAttr); ok {
+			return table
+		}
+	}
+	return nil
 }
 
 func (e *ExceptionTable) HandlerStart() uint16 {
