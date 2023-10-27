@@ -146,12 +146,12 @@ func init() {
 
 	InstructionSet[0x74] = instrINeg
 
-	InstructionSet[0x78] = instrShiftLeft[int32](0x1F)
-	InstructionSet[0x79] = instrShiftLeft[int64](0x3F)
-	InstructionSet[0x7A] = instrShiftRight[int32](0x1F) // TODO: Arithmetic
-	InstructionSet[0x7B] = instrShiftRight[int64](0x3F) // TODO: Arithmetic
-	InstructionSet[0x7C] = instrShiftRight[int32](0x1F)
-	InstructionSet[0x7D] = instrShiftRight[int64](0x3F)
+	InstructionSet[0x78] = instrShiftLeft[int32]
+	InstructionSet[0x79] = instrShiftLeft[int64]
+	InstructionSet[0x7A] = instrShiftRight[int32]
+	InstructionSet[0x7B] = instrShiftRight[int64]
+	InstructionSet[0x7C] = instrLogicalShiftRight[int32, uint32]
+	InstructionSet[0x7D] = instrLogicalShiftRight[int64, uint64]
 
 	InstructionSet[0x7E] = instrAnd[int32]
 	InstructionSet[0x7F] = instrAnd[int64]
@@ -509,36 +509,46 @@ func instrINeg(_ *Thread, frame *Frame) error {
 	return nil
 }
 
-func instrShiftLeft[T int32 | int64](mask int32) Instruction {
-	return func(_ *Thread, frame *Frame) error {
-		v2, ok := frame.PopOperand().(int32)
-		if !ok {
-			return fmt.Errorf("popped value2 for (i|l)shl is invalid type")
-		}
-		v1, ok := frame.PopOperand().(T)
-		if !ok {
-			return fmt.Errorf("popped value1 for (i|l)shl is invalid type")
-		}
-
-		frame.PushOperand(v1 << (v2 & mask))
-		return nil
+func instrShiftLeft[T int32 | int64](_ *Thread, frame *Frame) error {
+	v2, ok := frame.PopOperand().(int32)
+	if !ok {
+		return fmt.Errorf("popped value2 for (i|l)shl is invalid type")
 	}
+	v1, ok := frame.PopOperand().(T)
+	if !ok {
+		return fmt.Errorf("popped value1 for (i|l)shl is invalid type")
+	}
+
+	frame.PushOperand(v1 << v2)
+	return nil
 }
 
-func instrShiftRight[T int32 | int64](mask int32) Instruction {
-	return func(thread *Thread, frame *Frame) error {
-		v2, ok := frame.PopOperand().(int32)
-		if !ok {
-			return fmt.Errorf("popped value2 for (i|l)shr is invalid type")
-		}
-		v1, ok := frame.PopOperand().(T)
-		if !ok {
-			return fmt.Errorf("popped value1 for (i|l)shr is invalid type")
-		}
-
-		frame.PushOperand(v1 >> (v2 & mask))
-		return nil
+func instrShiftRight[T int32 | int64](_ *Thread, frame *Frame) error {
+	v2, ok := frame.PopOperand().(int32)
+	if !ok {
+		return fmt.Errorf("popped value2 for (i|l)shr is invalid type")
 	}
+	v1, ok := frame.PopOperand().(T)
+	if !ok {
+		return fmt.Errorf("popped value1 for (i|l)shr is invalid type")
+	}
+
+	frame.PushOperand(v1 >> v2)
+	return nil
+}
+
+func instrLogicalShiftRight[T int32 | int64, S uint32 | uint64](_ *Thread, frame *Frame) error {
+	v2, ok := frame.PopOperand().(int32)
+	if !ok {
+		return fmt.Errorf("popped value2 for (i|l)shr is invalid type")
+	}
+	v1, ok := frame.PopOperand().(T)
+	if !ok {
+		return fmt.Errorf("popped value1 for (i|l)shr is invalid type")
+	}
+
+	frame.PushOperand(T(S(v1) >> v2))
+	return nil
 }
 
 func instrAnd[T int32 | int64](thread *Thread, frame *Frame) error {
