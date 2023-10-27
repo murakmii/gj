@@ -26,6 +26,11 @@ func SystemCurrentTimeMillis(thread *vm.Thread, _ []interface{}) error {
 	return nil
 }
 
+func SystemNanoTime(thread *vm.Thread, _ []interface{}) error {
+	thread.CurrentFrame().PushOperand(time.Now().UnixNano())
+	return nil
+}
+
 func SystemInitProperties(thread *vm.Thread, args []interface{}) error {
 	props, ok := args[0].(*vm.Instance)
 	if !ok {

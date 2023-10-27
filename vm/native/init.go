@@ -18,6 +18,8 @@ var nop = func(_ *vm.Thread, _ []interface{}) error {
 func init() {
 	vm.RegisterNativeMethod("java/security/AccessController/getStackAccessControlContext()Ljava/security/AccessControlContext;", security.AccessControllerGetStackAccessControlContext)
 	vm.RegisterNativeMethod("java/security/AccessController/doPrivileged(Ljava/security/PrivilegedAction;)Ljava/lang/Object;", security.AccessControllerDoPrivilegedL)
+	vm.RegisterNativeMethod("java/security/AccessController/doPrivileged(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;", security.AccessControllerDoPrivilegedL)
+	vm.RegisterNativeMethod("java/security/AccessController/doPrivileged(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;", security.AccessControllerDoPrivilegedL)
 	vm.RegisterNativeMethod("java/security/AccessController/doPrivileged(Ljava/security/PrivilegedExceptionAction;)Ljava/lang/Object;", security.AccessControllerDoPrivilegedL)
 
 	vm.RegisterNativeMethod("java/io/FileDescriptor/initIDs()V", nop)
@@ -31,6 +33,8 @@ func init() {
 	vm.RegisterNativeMethod("java/io/FileOutputStream/initIDs()V", nop)
 	vm.RegisterNativeMethod("java/io/FileOutputStream/writeBytes([BIIZ)V", io.FileOutputStreamWriteBytes)
 
+	vm.RegisterNativeMethod("java/io/UnixFileSystem/canonicalize0(Ljava/lang/String;)Ljava/lang/String;", io.UnixFileSystemCanonicalize0)
+	vm.RegisterNativeMethod("java/io/UnixFileSystem/getBooleanAttributes0(Ljava/io/File;)I", io.UnixFileSystemGetBooleanAttributes0)
 	vm.RegisterNativeMethod("java/io/UnixFileSystem/initIDs()V", nop)
 
 	vm.RegisterNativeMethod("java/lang/Class/desiredAssertionStatus0(Ljava/lang/Class;)Z", lang.ClassDesiredAssertionStatus0)
@@ -52,6 +56,8 @@ func init() {
 	vm.RegisterNativeMethod("java/lang/Class/getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;", lang.ClassGetPrimitiveClass)
 
 	vm.RegisterNativeMethod("java/lang/ClassLoader/registerNatives()V", nop)
+	vm.RegisterNativeMethod("java/lang/ClassLoader/findLoadedClass0(Ljava/lang/String;)Ljava/lang/Class;", lang.ClassLoaderFindLoadedClass0)
+	vm.RegisterNativeMethod("java/lang/ClassLoader/findBootstrapClass(Ljava/lang/String;)Ljava/lang/Class;", lang.ClassLoaderFindLoadedClass0)
 
 	vm.RegisterNativeMethod("java/lang/Double/doubleToRawLongBits(D)J", lang.DoubleDoubleToRawLongBits)
 	vm.RegisterNativeMethod("java/lang/Double/longBitsToDouble(J)D", lang.DoubleLongBitsToDouble)
@@ -69,6 +75,7 @@ func init() {
 
 	vm.RegisterNativeMethod("java/lang/System/arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V", lang.SystemArrayCopy)
 	vm.RegisterNativeMethod("java/lang/System/currentTimeMillis()J", lang.SystemCurrentTimeMillis)
+	vm.RegisterNativeMethod("java/lang/System/nanoTime()J", lang.SystemNanoTime)
 	vm.RegisterNativeMethod("java/lang/System/initProperties(Ljava/util/Properties;)Ljava/util/Properties;", lang.SystemInitProperties)
 	vm.RegisterNativeMethod("java/lang/System/registerNatives()V", nop)
 	vm.RegisterNativeMethod("java/lang/System/setIn0(Ljava/io/InputStream;)V", lang.SystemSetArg0ToField("in", "Ljava/io/InputStream;"))
@@ -104,6 +111,8 @@ func init() {
 	vm.RegisterNativeMethod("sun/misc/Unsafe/getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;", misc.UnsafeGetObjectVolatile)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/objectFieldOffset(Ljava/lang/reflect/Field;)J", misc.UnsafeObjectFieldOffset)
 	vm.RegisterNativeMethod("sun/misc/Unsafe/registerNatives()V", nop)
+
+	vm.RegisterNativeMethod("sun/misc/URLClassPath/getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;", misc.URLClassPathGetLookupCacheURLs)
 
 	vm.RegisterNativeMethod("sun/misc/Signal/findSignal(Ljava/lang/String;)I", misc.SignalFindSignal)
 	vm.RegisterNativeMethod("sun/misc/Signal/handle0(IJ)J", misc.SignalHandle)

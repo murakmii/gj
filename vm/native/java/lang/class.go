@@ -28,11 +28,6 @@ func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
 	thisName := args[0].(*vm.Instance).VMData().(*string)
 	argName := args[1].(*vm.Instance).VMData().(*string)
 
-	if (*thisName)[0] != 'L' || (*argName)[0] != 'L' {
-		thread.CurrentFrame().PushOperand(int32(0))
-		return nil
-	}
-
 	argClass, err := thread.VM().Class(*argName, thread)
 	if err != nil {
 		return err

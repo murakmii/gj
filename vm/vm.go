@@ -140,6 +140,7 @@ func (vm *VM) Class(className string, thread *Thread) (*Class, error) {
 		}
 
 		if class == nil {
+			vm.classLock.Unlock()
 			return nil, fmt.Errorf("class '%s' not found", className)
 		}
 	}

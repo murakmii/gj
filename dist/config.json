@@ -1,6 +1,7 @@
 {
   "class_path": [
     "{{ .JAVA_HOME }}/jre/lib/*.jar",
+    "{{ .JAVA_HOME }}/jre/lib/ext/*.jar",
     "{{ .WORKDIR}}"
   ],
   "system_properties": {
@@ -9,7 +10,7 @@
     "java.vendor.url": "https://github.com/murakmii/gj",
     "java.home": "{{ .JAVA_HOME }}",
     "java.class.version": "52.0",
-    "java.class.path": "{{ .JAVA_HOME }}/jre/lib/*.jar:{{ .WORKDIR}}",
+    "java.class.path": "{{ .JAVA_HOME }}/jre/lib:{{ .JAVA_HOME }}/jre/lib/ext:{{ .WORKDIR}}",
     "os.name": "Amazon Linux",
     "os.arch": "x86_64",
     "os.version": "2",

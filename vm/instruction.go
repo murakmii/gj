@@ -802,10 +802,7 @@ func instrTableSwitch(thread *Thread, frame *Frame) error {
 	low := int32(frame.NextParamUint32())
 	high := int32(frame.NextParamUint32())
 
-	fmt.Printf("tableswitch(%d) default=%d, low=%d, high=%d\n", frame.PC(), defaultVal, low, high)
-
 	index := frame.PopOperand().(int32)
-	fmt.Printf("index=%d\n", index)
 	if index < low || index > high {
 		frame.JumpPC(frame.PC() + uint16(defaultVal))
 		return nil
@@ -814,7 +811,6 @@ func instrTableSwitch(thread *Thread, frame *Frame) error {
 	offsets := make([]int, high-low+1)
 	for i := range offsets {
 		offsets[i] = int(frame.NextParamUint32())
-		fmt.Printf("offset[%02d] %d\n", i, offsets[i])
 	}
 
 	frame.JumpPC(frame.PC() + uint16(offsets[index-low]))
@@ -837,7 +833,6 @@ func instrLookupSwitch(_ *Thread, frame *Frame) error {
 		}
 	}
 
-	fmt.Printf("lookupswitch go to default = %d\n", frame.PC()+uint16(defaultVal))
 	frame.JumpPC(frame.PC() + uint16(defaultVal))
 	return nil
 }
