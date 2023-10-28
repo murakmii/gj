@@ -24,8 +24,7 @@ func FileInputStreamClose0(_ *vm.Thread, args []interface{}) error {
 }
 
 func FileInputStreamOpen0(thread *vm.Thread, args []interface{}) error {
-	name := args[1].(*vm.Instance).GetCharArrayField("value")
-	file, err := os.Open(name)
+	file, err := os.Open(args[1].(*vm.Instance).AsString())
 	if err != nil {
 		return err
 	}

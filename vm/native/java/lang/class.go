@@ -14,8 +14,7 @@ func ClassDesiredAssertionStatus0(thread *vm.Thread, _ []interface{}) error {
 }
 
 func ClassGetPrimitiveClass(thread *vm.Thread, args []interface{}) error {
-	className := args[0].(*vm.Instance).GetCharArrayField("value")
-	class, err := thread.VM().Class(className, thread)
+	class, err := thread.VM().Class(args[0].(*vm.Instance).AsString(), thread)
 	if err != nil {
 		return err
 	}
@@ -118,7 +117,7 @@ func ClassGetName0(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassForName0(thread *vm.Thread, args []interface{}) error {
-	name := strings.ReplaceAll(args[0].(*vm.Instance).GetCharArrayField("value"), ".", "/")
+	name := strings.ReplaceAll(args[0].(*vm.Instance).AsString(), ".", "/")
 
 	class, err := thread.VM().Class(name, thread)
 	if err != nil {

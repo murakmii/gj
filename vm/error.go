@@ -27,7 +27,7 @@ func UnwrapJavaError(err error) *JavaError {
 
 func NewJavaErr(exception *Instance) error {
 	return &JavaError{
-		message:   exception.GetField("detailMessage", "Ljava/lang/String;").(*Instance).GetCharArrayField("value"),
+		message:   exception.GetField("detailMessage", "Ljava/lang/String;").(*Instance).AsString(),
 		exception: exception,
 	}
 }

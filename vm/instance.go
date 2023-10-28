@@ -167,6 +167,21 @@ func (instance *Instance) AsArray() []interface{} {
 	return instance.fields
 }
 
+func (instance *Instance) AsString() string {
+	instance.assertClass(JavaLangStringID)
+
+	// java.lang.String has value field contains string content.
+	// https://github.com/openjdk/jdk8u/blob/master/jdk/src/share/classes/java/lang/String.java#L114
+	slice := instance.GetField("value", "[C").(*Instance).AsArray()
+
+	u16 := make([]uint16, len(slice))
+	for i := range u16 {
+		u16[i] = uint16(slice[i].(int32))
+	}
+
+	return string(utf16.Decode(u16))
+}
+
 // For instance of java.io.FileDescriptor
 func (instance *Instance) AsFile() *os.File {
 	if instance.vmData != nil {
@@ -178,19 +193,6 @@ func (instance *Instance) AsFile() *os.File {
 
 	instance.vmData = file
 	return file
-}
-
-// Utility method to get value of char array field as string.
-// e.g., 'value' field of java.lang.String, 'name' field of java.lang.Thread.
-func (instance *Instance) GetCharArrayField(name string) string {
-	slice := instance.GetField(name, "[C").(*Instance).AsArray()
-
-	u16 := make([]uint16, len(slice))
-	for i := 0; i < len(slice); i++ {
-		u16[i] = uint16(slice[i].(int32))
-	}
-
-	return string(utf16.Decode(u16))
 }
 
 func (instance *Instance) Clone() *Instance {

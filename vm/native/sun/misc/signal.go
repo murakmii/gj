@@ -13,7 +13,7 @@ var signals = map[string]os.Signal{
 }
 
 func SignalFindSignal(thread *vm.Thread, args []interface{}) error {
-	sig, exist := signals[args[0].(*vm.Instance).GetCharArrayField("value")]
+	sig, exist := signals[args[0].(*vm.Instance).AsString()]
 	if !exist {
 		sig = syscall.Signal(-1)
 	}

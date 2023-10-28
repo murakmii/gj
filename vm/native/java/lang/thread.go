@@ -27,7 +27,7 @@ func ThreadStart0(thread *vm.Thread, args []interface{}) error {
 	daemon := jThread.GetField("daemon", "Z").(int32)
 	name := jThread.GetField("name", "Ljava/lang/String;").(*vm.Instance)
 
-	newThread := vm.NewThread(thread.VM(), name.GetCharArrayField("value"), false, daemon == 1)
+	newThread := vm.NewThread(thread.VM(), name.AsString(), false, daemon == 1)
 
 	jThread.SetVMData(newThread)
 	newThread.SetJavaThread(jThread)
@@ -49,8 +49,6 @@ func ThreadSleep(thread *vm.Thread, args []interface{}) error {
 }
 
 func ThreadSetNativeName(_ *vm.Thread, args []interface{}) error {
-	args[0].(*vm.Instance).VMData().(*vm.Thread).
-		SetName(args[1].(*vm.Instance).GetCharArrayField("value"))
-
+	args[0].(*vm.Instance).VMData().(*vm.Thread).SetName(args[1].(*vm.Instance).AsString())
 	return nil
 }
