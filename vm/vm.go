@@ -10,10 +10,10 @@ type (
 	VM struct {
 		sysProps map[string]string
 
-		classPaths []gj.ClassPath
-		classCache map[string]*Class
-		stdClass   []*Class
-		classLock  *sync.Mutex
+		classPaths        []gj.ClassPath
+		classCache        map[string]*Class
+		specialClassCache []*Class
+		classLock         *sync.Mutex
 
 		mainThread *Thread
 		executor   *ThreadExecutor
@@ -22,26 +22,18 @@ type (
 
 		nativeMem *NativeMemAllocator
 	}
-
-	StdClassName int
-)
-
-const (
-	JavaLangString StdClassName = iota
-	JavaLangClass
-	JavaLangObject
 )
 
 func InitVM(config *gj.Config) (*VM, error) {
 	var err error
 	vm := &VM{
-		sysProps:        config.SysProps,
-		classCache:      make(map[string]*Class),
-		stdClass:        make([]*Class, 3),
-		classLock:       &sync.Mutex{},
-		executor:        NewThreadExecutor(),
-		javaStringCache: make(map[string]*Instance),
-		nativeMem:       CreateNativeMemAllocator(),
+		sysProps:          config.SysProps,
+		classCache:        make(map[string]*Class),
+		specialClassCache: make([]*Class, 256),
+		classLock:         &sync.Mutex{},
+		executor:          NewThreadExecutor(),
+		javaStringCache:   make(map[string]*Instance),
+		nativeMem:         CreateNativeMemAllocator(),
 	}
 	vm.mainThread = NewThread(vm, "main", true, false)
 
@@ -50,14 +42,16 @@ func InitVM(config *gj.Config) (*VM, error) {
 		return nil, err
 	}
 
-	classes, err := vm.initializeClasses([]string{JavaLangObject.String(), JavaLangString.String(), "java/lang/StackTraceElement", "java/lang/System", JavaLangClass.String()})
+	classes, err := vm.initializeClasses([]string{
+		"java/lang/Object",
+		"java/lang/String",
+		"java/lang/StackTraceElement",
+		"java/lang/System",
+		"java/lang/Class",
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	vm.stdClass[JavaLangObject] = classes[0]
-	vm.stdClass[JavaLangString] = classes[1]
-	vm.stdClass[JavaLangClass] = classes[4]
 
 	for _, class := range vm.classCache {
 		class.InitJava(vm)
@@ -95,8 +89,12 @@ func (vm *VM) SysProps() map[string]string {
 	return vm.sysProps
 }
 
-func (vm *VM) StdClass(name StdClassName) *Class {
-	return vm.stdClass[name]
+func (vm *VM) DoneLoadingMinimumClass() bool {
+	return vm.specialClassCache[JavaLangClassID] != nil && vm.specialClassCache[JavaLangClassID].State() == Initialized
+}
+
+func (vm *VM) SpecialClass(id SpecialClassID) *Class {
+	return vm.specialClassCache[id]
 }
 
 func (vm *VM) Executor() *ThreadExecutor {
@@ -146,6 +144,10 @@ func (vm *VM) Class(className string, thread *Thread) (*Class, error) {
 	}
 
 	vm.classCache[className] = class
+	if !class.ID().IsUnknown() {
+		vm.specialClassCache[class.ID()] = class
+	}
+
 	vm.classLock.Unlock()
 
 	if thread != nil && class.State() == NotInitialized {
@@ -281,17 +283,4 @@ func (vm *VM) initializeSystemClass() error {
 	}
 
 	return nil
-}
-
-func (name StdClassName) String() string {
-	switch name {
-	case JavaLangString:
-		return "java/lang/String"
-	case JavaLangClass:
-		return "java/lang/Class"
-	case JavaLangObject:
-		return "java/lang/Object"
-	default:
-		panic(fmt.Sprintf("StdClassName = %d is invalid", name))
-	}
 }

@@ -152,6 +152,17 @@ func (instance *Instance) SetVMData(data interface{}) *Instance {
 	return instance
 }
 
+func (instance *Instance) ToBeClass(class *Class) *Instance {
+	instance.assertClass(JavaLangClassID)
+	instance.vmData = class
+	return instance
+}
+
+func (instance *Instance) AsClass() *Class {
+	instance.assertClass(JavaLangClassID)
+	return instance.vmData.(*Class)
+}
+
 func (instance *Instance) AsArray() []interface{} {
 	return instance.fields
 }
@@ -191,5 +202,11 @@ func (instance *Instance) Clone() *Instance {
 		fields:  fields,
 		monitor: NewMonitor(),
 		vmData:  instance.vmData,
+	}
+}
+
+func (instance *Instance) assertClass(expected SpecialClassID) {
+	if instance.class.ID() != expected {
+		panic(fmt.Sprintf("assertClass %s: %d != %d", instance.class.File().ThisClass(), instance.class.ID(), expected))
 	}
 }

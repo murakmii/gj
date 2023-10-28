@@ -16,13 +16,7 @@ func ReflectionGetCallerClassV(thread *vm.Thread, _ []interface{}) error {
 }
 
 func ReflectionGetClassAccessFlags(thread *vm.Thread, args []interface{}) error {
-	className := args[0].(*vm.Instance).VMData().(*string)
-
-	class, err := thread.VM().Class(*className, thread)
-	if err != nil {
-		return err
-	}
-
+	class := args[0].(*vm.Instance).AsClass()
 	thread.CurrentFrame().PushOperand(int32(class.File().AccessFlag()))
 	return nil
 }

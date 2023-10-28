@@ -8,6 +8,7 @@ import (
 
 type (
 	Class struct {
+		id           SpecialClassID
 		file         *class_file.ClassFile
 		java         *Instance
 		fields       []interface{}
@@ -20,7 +21,8 @@ type (
 		interfaces []*Class
 	}
 
-	ClassState uint8
+	ClassState     uint8
+	SpecialClassID uint8
 )
 
 const (
@@ -30,8 +32,16 @@ const (
 	FailedInitialization
 )
 
+const (
+	UnknownClassID SpecialClassID = iota
+	JavaLangObjectID
+	JavaLangStringID
+	JavaLangClassID
+)
+
 func NewClass(file *class_file.ClassFile) *Class {
 	return &Class{
+		id:           ClassIDFrom(file.ThisClass()),
 		file:         file,
 		fields:       make([]interface{}, len(file.AllFields())-len(file.InstanceFields())),
 		totalIFields: -1,
@@ -51,10 +61,10 @@ func NewArrayClass(vm *VM, desc string) *Class {
 		fields:       nil,
 		totalIFields: 0,
 		state:        Initialized,
-		super:        vm.StdClass(JavaLangObject),
+		super:        vm.SpecialClass(JavaLangObjectID),
 	}
 
-	if vm.StdClass(JavaLangClass) != nil {
+	if vm.DoneLoadingMinimumClass() {
 		array.InitJava(vm)
 	}
 
@@ -69,11 +79,15 @@ func NewPrimitiveClass(vm *VM, desc string) *Class {
 		state:        Initialized,
 	}
 
-	if vm.StdClass(JavaLangClass) != nil {
+	if vm.DoneLoadingMinimumClass() {
 		prim.InitJava(vm)
 	}
 
 	return prim
+}
+
+func (class *Class) ID() SpecialClassID {
+	return class.id
 }
 
 func (class *Class) State() ClassState {
@@ -183,7 +197,7 @@ func (class *Class) Initialize(curThread *Thread) (ClassState, error) {
 	case NotInitialized:
 		// Initialize java/lang/Class instance for this class.
 		// In VM initialization phase, java.lang.Class is not loaded yet.
-		if curThread.VM().StdClass(JavaLangClass) != nil {
+		if curThread.VM().DoneLoadingMinimumClass() {
 			class.InitJava(curThread.VM())
 		}
 
@@ -215,14 +229,8 @@ func (class *Class) Java() *Instance {
 	return class.java
 }
 
-func (class *Class) SetJava(instance *Instance) *Class {
-	class.java = instance
-	return class
-}
-
 func (class *Class) InitJava(vm *VM) {
-	name := class.file.ThisClass()
-	class.java = NewInstance(vm.StdClass(JavaLangClass)).SetVMData(&name)
+	class.java = NewInstance(vm.SpecialClass(JavaLangClassID)).ToBeClass(class)
 }
 
 func (class *Class) initialize(curThread *Thread) error {
@@ -314,4 +322,21 @@ func (class *Class) initializeFieldID(vm *VM) (int, error) {
 
 	class.totalIFields = id
 	return id, nil
+}
+
+func ClassIDFrom(name string) SpecialClassID {
+	switch name {
+	case "java/lang/Object":
+		return JavaLangObjectID
+	case "java/lang/String":
+		return JavaLangStringID
+	case "java/lang/Class":
+		return JavaLangClassID
+	default:
+		return UnknownClassID
+	}
+}
+
+func (cid SpecialClassID) IsUnknown() bool {
+	return cid == UnknownClassID
 }

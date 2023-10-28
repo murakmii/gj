@@ -6,12 +6,7 @@ import (
 
 func NativeConstructorAccessorImplNewInstance0(thread *vm.Thread, args []interface{}) error {
 	cstr := args[0].(*vm.Instance)
-
-	class, err := thread.VM().Class(*(cstr.GetField("clazz", "Ljava/lang/Class;").(*vm.Instance).VMData().(*string)), thread)
-	if err != nil {
-		return err
-	}
-
+	class := cstr.GetField("clazz", "Ljava/lang/Class;").(*vm.Instance).AsClass()
 	method := class.File().FindMethodByID(int(cstr.GetField("slot", "I").(int32)))
 
 	var cstrArgs []interface{}
@@ -25,7 +20,7 @@ func NativeConstructorAccessorImplNewInstance0(thread *vm.Thread, args []interfa
 		locals[i+1] = a
 	}
 
-	err = thread.Execute(vm.NewFrame(class, method).SetLocals(locals))
+	err := thread.Execute(vm.NewFrame(class, method).SetLocals(locals))
 	if err != nil {
 		return err
 	}

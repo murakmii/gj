@@ -25,16 +25,11 @@ func ClassGetPrimitiveClass(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
-	thisName := args[0].(*vm.Instance).VMData().(*string)
-	argName := args[1].(*vm.Instance).VMData().(*string)
-
-	argClass, err := thread.VM().Class(*argName, thread)
-	if err != nil {
-		return err
-	}
+	thisName := args[0].(*vm.Instance).AsClass().File().ThisClass()
+	argClass := args[1].(*vm.Instance).AsClass()
 
 	var result int32
-	if argClass.IsSubClassOf(thisName) || argClass.Implements(thisName) {
+	if argClass.IsSubClassOf(&thisName) || argClass.Implements(&thisName) {
 		result = 1
 	}
 
@@ -43,15 +38,8 @@ func ClassIsAssignableFrom(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassIsArray(thread *vm.Thread, args []interface{}) error {
-	className := args[0].(*vm.Instance).VMData().(*string)
-
-	class, err := thread.VM().Class(*className, thread)
-	if err != nil {
-		return err
-	}
-
 	var ret int32
-	if class.IsArray() {
+	if args[0].(*vm.Instance).AsClass().IsArray() {
 		ret = 1
 	}
 
@@ -60,11 +48,7 @@ func ClassIsArray(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassIsInterface(thread *vm.Thread, args []interface{}) error {
-	className := args[0].(*vm.Instance).VMData().(*string)
-	class, err := thread.VM().Class(*className, thread)
-	if err != nil {
-		return err
-	}
+	class := args[0].(*vm.Instance).AsClass()
 
 	var result int32
 	if class.File().AccessFlag().Contain(class_file.InterfaceFlag) {
@@ -76,10 +60,10 @@ func ClassIsInterface(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassIsInstance(thread *vm.Thread, args []interface{}) error {
-	className := args[0].(*vm.Instance).VMData().(*string)
+	className := args[0].(*vm.Instance).AsClass().File().ThisClass()
 
 	var result int32
-	if args[1].(*vm.Instance).Class().IsSubClassOf(className) {
+	if args[1].(*vm.Instance).Class().IsSubClassOf(&className) {
 		result = 1
 	}
 
@@ -88,8 +72,10 @@ func ClassIsInstance(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassIsPrimitive(thread *vm.Thread, args []interface{}) error {
+	className := args[0].(*vm.Instance).AsClass().File().ThisClass()
+
 	var result int32
-	if class_file.JavaTypeSignature(*(args[0].(*vm.Instance).VMData().(*string))).IsPrimitive() {
+	if class_file.JavaTypeSignature(className).IsPrimitive() {
 		result = 1
 	}
 
@@ -98,8 +84,8 @@ func ClassIsPrimitive(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassGetComponentType(thread *vm.Thread, args []interface{}) error {
-	className := args[0].(*vm.Instance).VMData().(*string)
-	component := class_file.FieldType((*className)[1:]).Type()
+	className := args[0].(*vm.Instance).AsClass().File().ThisClass()
+	component := class_file.FieldType((className)[1:]).Type()
 
 	class, err := thread.VM().Class(component, thread)
 	if err != nil {
@@ -111,19 +97,13 @@ func ClassGetComponentType(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassGetModifiers(thread *vm.Thread, args []interface{}) error {
-	class, err := thread.VM().Class(*(args[0].(*vm.Instance).VMData().(*string)), thread)
-	if err != nil {
-		return err
-	}
-
+	class := args[0].(*vm.Instance).AsClass()
 	thread.CurrentFrame().PushOperand(int32(class.File().AccessFlag()))
 	return nil
 }
 
 func ClassGetName0(thread *vm.Thread, args []interface{}) error {
-	javaClass := args[0].(*vm.Instance)
-
-	name := strings.ReplaceAll(*javaClass.VMData().(*string), "/", ".")
+	name := strings.ReplaceAll(args[0].(*vm.Instance).AsClass().File().ThisClass(), "/", ".")
 	if name[0] == 'L' {
 		name = name[1 : len(name)-1]
 	}
@@ -150,13 +130,7 @@ func ClassForName0(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassGetSuperClass(thread *vm.Thread, args []interface{}) error {
-	classInstance := args[0].(*vm.Instance)
-
-	class, err := thread.VM().Class(*(classInstance.VMData().(*string)), thread)
-	if err != nil {
-		return err
-	}
-
+	class := args[0].(*vm.Instance).AsClass()
 	if class.Super() == nil {
 		thread.CurrentFrame().PushOperand(nil)
 		return nil
@@ -167,12 +141,9 @@ func ClassGetSuperClass(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
-	class, err := thread.VM().Class(*(args[0].(*vm.Instance).VMData().(*string)), thread)
-	if err != nil {
-		return err
-	}
-
+	class := args[0].(*vm.Instance).AsClass()
 	pubOnly := args[1].(int32) == 1
+
 	cstrs := make([]*class_file.MethodInfo, 0)
 	for _, m := range class.File().AllMethods() {
 		if (*m.Name()) == "<init>" && (!pubOnly || m.IsPublic()) {
@@ -244,12 +215,8 @@ func ClassGetDeclaredConstructors(thread *vm.Thread, args []interface{}) error {
 
 func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 	class := args[0].(*vm.Instance)
+	targetClass := class.AsClass()
 	pubOnly := args[1].(int32) == 1
-
-	targetClass, err := thread.VM().Class(*(class.VMData().(*string)), thread)
-	if err != nil {
-		return err
-	}
 
 	var fields []*class_file.FieldInfo
 	for _, f := range targetClass.File().AllFields() {
@@ -302,13 +269,9 @@ func ClassGetDeclaredFields0(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassGetEnclosingMethod0(thread *vm.Thread, args []interface{}) error {
-	className := args[0].(*vm.Instance).VMData().(*string)
-	class, err := thread.VM().Class(*className, thread)
-	if err != nil {
-		return err
-	}
-
+	class := args[0].(*vm.Instance).AsClass()
 	enc := class.File().EnclosingMethod()
+
 	if enc == nil {
 		thread.CurrentFrame().PushOperand(nil)
 		return nil
@@ -318,12 +281,7 @@ func ClassGetEnclosingMethod0(thread *vm.Thread, args []interface{}) error {
 }
 
 func ClassGetDeclaringClass0(thread *vm.Thread, args []interface{}) error {
-	className := args[0].(*vm.Instance).VMData().(*string)
-	class, err := thread.VM().Class(*className, thread)
-	if err != nil {
-		return err
-	}
-
+	class := args[0].(*vm.Instance).AsClass()
 	if len(class.File().InnerClassesAttr()) == 0 {
 		thread.CurrentFrame().PushOperand(nil)
 		return nil

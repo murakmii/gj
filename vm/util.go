@@ -7,7 +7,7 @@ import (
 type GoString string
 
 func (s GoString) ToJavaString(vm *VM) *Instance {
-	js := NewInstance(vm.StdClass(JavaLangString))
+	js := NewInstance(vm.SpecialClass(JavaLangStringID))
 
 	u16 := utf16.Encode([]rune(s))
 	instance, slice := NewArray(vm, "[C", len(u16))
