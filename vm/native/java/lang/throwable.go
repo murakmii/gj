@@ -15,7 +15,7 @@ func ThrowableFillInStackTrace(thread *vm.Thread, args []interface{}) error {
 
 	throwable := args[0].(*vm.Instance)
 	throwable.PutField("stackTrace", "[Ljava/lang/StackTraceElement;", traceArray)
-	throwable.SetVMData(traces)
+	throwable.ToBeThrowable(traces)
 
 	thread.CurrentFrame().PushOperand(throwable)
 	return nil
@@ -23,7 +23,7 @@ func ThrowableFillInStackTrace(thread *vm.Thread, args []interface{}) error {
 
 func ThrowableGetStackTraceDepth(thread *vm.Thread, args []interface{}) error {
 	depth := int32(0)
-	if traces, ok := args[0].(*vm.Instance).VMData().([]*vm.StackTraceElement); ok {
+	if traces := args[0].(*vm.Instance).AsThrowable(); traces != nil {
 		depth = int32(len(traces))
 	}
 
@@ -32,12 +32,13 @@ func ThrowableGetStackTraceDepth(thread *vm.Thread, args []interface{}) error {
 }
 
 func ThrowableGetStackTraceElement(thread *vm.Thread, args []interface{}) error {
-	throwable := args[0].(*vm.Instance)
-	traces, ok := throwable.VMData().([]*vm.StackTraceElement)
-	if !ok {
-		return fmt.Errorf("%s has NOT stack trace", throwable.Class().File().ThisClass())
+	traces := args[0].(*vm.Instance).AsThrowable()
+	index := args[1].(int32)
+
+	if index < 0 || index >= int32(len(traces)) {
+		return fmt.Errorf("index out of bounds")
 	}
 
-	thread.CurrentFrame().PushOperand(traces[args[1].(int32)].ToJava(thread.VM()))
+	thread.CurrentFrame().PushOperand(traces[index].ToJava(thread.VM()))
 	return nil
 }

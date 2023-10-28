@@ -24,26 +24,18 @@ func FileInputStreamClose0(_ *vm.Thread, args []interface{}) error {
 }
 
 func FileInputStreamOpen0(thread *vm.Thread, args []interface{}) error {
+	fis := args[0].(*vm.Instance)
+	fd := fis.GetField("fd", "Ljava/io/FileDescriptor;").(*vm.Instance)
+	if fd.AsFile() != nil {
+		return nil
+	}
+
 	file, err := os.Open(args[1].(*vm.Instance).AsString())
 	if err != nil {
 		return err
 	}
 
-	fdClass, err := thread.VM().Class("java/io/FileDescriptor", thread)
-	if err != nil {
-		return err
-	}
-	_, constr := fdClass.ResolveMethod("<init>", "(I)V")
-
-	fd := vm.NewInstance(fdClass)
-	if err = thread.Execute(vm.NewFrame(fdClass, constr).SetLocals([]interface{}{fd, int32(file.Fd())})); err != nil {
-		return err
-	}
-	fd.SetVMData(file)
-
-	fis := args[0].(*vm.Instance)
-	fis.PutField("fd", "Ljava/io/FileDescriptor;", fd)
-
+	fd.ToBeFile(file)
 	return nil
 }
 

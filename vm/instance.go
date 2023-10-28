@@ -15,7 +15,8 @@ type (
 		monitor *Monitor
 
 		// Any data for VM implementation. e.g.,
-		// * Class name for instance of java.lang.Class
+		// * *vm.Class for instance of java.lang.Class
+		// * *vm.Thread for instance of java.lang.Thread
 		vmData interface{}
 	}
 )
@@ -143,33 +144,36 @@ func (instance *Instance) Monitor() *Monitor {
 	return instance.monitor
 }
 
-func (instance *Instance) VMData() interface{} {
-	return instance.vmData
-}
-
-func (instance *Instance) SetVMData(data interface{}) *Instance {
-	instance.vmData = data
-	return instance
-}
-
-func (instance *Instance) ToBeClass(class *Class) *Instance {
-	instance.assertClass(JavaLangClassID)
-	instance.vmData = class
-	return instance
-}
-
-func (instance *Instance) AsClass() *Class {
-	instance.assertClass(JavaLangClassID)
-	return instance.vmData.(*Class)
-}
-
 func (instance *Instance) AsArray() []interface{} {
 	return instance.fields
 }
 
-func (instance *Instance) AsString() string {
-	instance.assertClass(JavaLangStringID)
+// For instance of java.lang.Class
+func (instance *Instance) AsClass() *Class        { return instance.vmData.(*Class) }
+func (instance *Instance) ToBeClass(class *Class) { instance.vmData = class }
 
+// For instance of java.lang.Thread
+func (instance *Instance) ToBeThread(thread *Thread) { instance.vmData = thread }
+func (instance *Instance) AsThread() *Thread {
+	if instance.vmData == nil { // vmData of java.lang.Thread instance is nil until calling start0
+		return nil
+	}
+	return instance.vmData.(*Thread)
+}
+
+// For instance of java.lang.Throwable
+func (instance *Instance) ToBeThrowable(traces []*StackTraceElement) { instance.vmData = traces }
+func (instance *Instance) AsThrowable() []*StackTraceElement {
+	// vmData of java.lang.Throwable instance is nil if fillInStackTrace is skipped
+	// https://github.com/openjdk/jdk8u/blob/master/jdk/src/share/classes/java/lang/Throwable.java#L360
+	if instance.vmData == nil {
+		return nil
+	}
+	return instance.vmData.([]*StackTraceElement)
+}
+
+// For instance of java.lang.String
+func (instance *Instance) AsString() string {
 	// java.lang.String has value field contains string content.
 	// https://github.com/openjdk/jdk8u/blob/master/jdk/src/share/classes/java/lang/String.java#L114
 	slice := instance.GetField("value", "[C").(*Instance).AsArray()
@@ -188,11 +192,23 @@ func (instance *Instance) AsFile() *os.File {
 		return instance.vmData.(*os.File)
 	}
 
+	var file *os.File
+
+	// Constructor of FileDescriptor could be received fd already opened(>= 0). e.g., stdout, stdin, stderr
+	// In this case, open it by os.NewFile
+	// https://github.com/openjdk/jdk8u/blob/master/jdk/src/solaris/classes/java/io/FileDescriptor.java#L62
 	fd := instance.GetField("fd", "I").(int32)
-	file := os.NewFile(uintptr(fd), "")
+	if fd >= 0 {
+		file = os.NewFile(uintptr(fd), "")
+	}
 
 	instance.vmData = file
 	return file
+}
+
+func (instance *Instance) ToBeFile(file *os.File) {
+	instance.PutField("fd", "I", int32(file.Fd()))
+	instance.vmData = file
 }
 
 func (instance *Instance) Clone() *Instance {
@@ -204,11 +220,5 @@ func (instance *Instance) Clone() *Instance {
 		fields:  fields,
 		monitor: NewMonitor(),
 		vmData:  instance.vmData,
-	}
-}
-
-func (instance *Instance) assertClass(expected SpecialClassID) {
-	if instance.class.ID() != expected {
-		panic(fmt.Sprintf("assertClass %s: %d != %d", instance.class.File().ThisClass(), instance.class.ID(), expected))
 	}
 }

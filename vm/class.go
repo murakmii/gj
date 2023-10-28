@@ -37,6 +37,7 @@ const (
 	JavaLangObjectID
 	JavaLangStringID
 	JavaLangClassID
+	JavaLangThreadID
 )
 
 func NewClass(file *class_file.ClassFile) *Class {
@@ -230,7 +231,9 @@ func (class *Class) Java() *Instance {
 }
 
 func (class *Class) InitJava(vm *VM) {
-	class.java = NewInstance(vm.SpecialClass(JavaLangClassID)).ToBeClass(class)
+	java := NewInstance(vm.SpecialClass(JavaLangClassID))
+	java.ToBeClass(class)
+	class.java = java
 }
 
 func (class *Class) initialize(curThread *Thread) error {
@@ -332,6 +335,8 @@ func ClassIDFrom(name string) SpecialClassID {
 		return JavaLangStringID
 	case "java/lang/Class":
 		return JavaLangClassID
+	case "java/lang/Thread":
+		return JavaLangThreadID
 	default:
 		return UnknownClassID
 	}
