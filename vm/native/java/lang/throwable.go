@@ -14,10 +14,7 @@ func ThrowableFillInStackTrace(thread *vm.Thread, args []interface{}) error {
 	}
 
 	throwable := args[0].(*vm.Instance)
-
-	traceName := "stackTrace"
-	traceDesc := "[Ljava/lang/StackTraceElement;"
-	throwable.PutField(&traceName, &traceDesc, traceArray)
+	throwable.PutField("stackTrace", "[Ljava/lang/StackTraceElement;", traceArray)
 	throwable.SetVMData(traces)
 
 	thread.CurrentFrame().PushOperand(throwable)

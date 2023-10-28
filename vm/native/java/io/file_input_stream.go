@@ -16,10 +16,7 @@ func FileInputStreamAvailable0(thread *vm.Thread, args []interface{}) error {
 
 func FileInputStreamClose0(_ *vm.Thread, args []interface{}) error {
 	fis := args[0].(*vm.Instance)
-
-	fdName := "fd"
-	fdDesc := "Ljava/io/FileDescriptor;"
-	if err := fis.GetField(&fdName, &fdDesc).(*vm.Instance).AsFile().Close(); err != nil {
+	if err := fis.GetField("fd", "Ljava/io/FileDescriptor;").(*vm.Instance).AsFile().Close(); err != nil {
 		return err
 	}
 
@@ -46,18 +43,13 @@ func FileInputStreamOpen0(thread *vm.Thread, args []interface{}) error {
 	fd.SetVMData(file)
 
 	fis := args[0].(*vm.Instance)
-
-	fdName := "fd"
-	fdDesc := "Ljava/io/FileDescriptor;"
-	fis.PutField(&fdName, &fdDesc, fd)
+	fis.PutField("fd", "Ljava/io/FileDescriptor;", fd)
 
 	return nil
 }
 
 func FileInputStreamReadBytes(thread *vm.Thread, args []interface{}) error {
-	fdName := "fd"
-	fdDesc := "Ljava/io/FileDescriptor;"
-	file := args[0].(*vm.Instance).GetField(&fdName, &fdDesc).(*vm.Instance).AsFile()
+	file := args[0].(*vm.Instance).GetField("fd", "Ljava/io/FileDescriptor;").(*vm.Instance).AsFile()
 	dst := args[1].(*vm.Instance).AsArray()
 	off := int(args[2].(int32))
 	size := args[3].(int32)

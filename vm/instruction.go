@@ -932,7 +932,7 @@ func instrGetField(_ *Thread, frame *Frame) error {
 		return fmt.Errorf("objectref for getfield is null")
 	}
 
-	frame.PushOperand(instance.GetField(name, desc))
+	frame.PushOperand(instance.GetField(*name, *desc))
 	return nil
 }
 
@@ -944,7 +944,7 @@ func instrPutField(_ *Thread, frame *Frame) error {
 		return fmt.Errorf("objectref for getfield is null")
 	}
 
-	instance.PutField(name, desc, value)
+	instance.PutField(*name, *desc, value)
 	return nil
 }
 
@@ -960,8 +960,6 @@ func instrInvokeVirtual(thread *Thread, frame *Frame) error {
 		return thread.ExecMethod(resolvedClass, resolvedMethod)
 
 	default:
-		fmt.Printf("operand stack: %+v\nPC: %d\n", frame.opStack, frame.PC())
-
 		return fmt.Errorf("invokevirtual: receiver is invalid object: %+v", i)
 	}
 }

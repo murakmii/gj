@@ -143,9 +143,7 @@ func UnsafeObjectFieldOffset(thread *vm.Thread, args []interface{}) error {
 		return fmt.Errorf("Unsafe.objectFieldOffset received arg is NOT field instance")
 	}
 
-	slotName := "slot"
-	slotDesc := "I"
-	slot, ok := fieldInstance.GetField(&slotName, &slotDesc).(int32)
+	slot, ok := fieldInstance.GetField("slot", "I").(int32)
 	if !ok {
 		return fmt.Errorf("can't get slot in Unsafe.objectFieldOffset")
 	}

@@ -8,15 +8,17 @@ import (
 	"unicode/utf16"
 )
 
-type Instance struct {
-	class   *Class
-	fields  []interface{}
-	monitor *Monitor
+type (
+	Instance struct {
+		class   *Class
+		fields  []interface{}
+		monitor *Monitor
 
-	// Any data for VM implementation. e.g.,
-	// * Class name for instance of java.lang.Class
-	vmData interface{}
-}
+		// Any data for VM implementation. e.g.,
+		// * Class name for instance of java.lang.Class
+		vmData interface{}
+	}
+)
 
 func NewInstance(class *Class) *Instance {
 	return &Instance{
@@ -112,8 +114,8 @@ func (instance *Instance) CompareAndSwap(id int, expected, x *Instance) (bool, e
 	return false, nil
 }
 
-func (instance *Instance) GetField(name, desc *string) interface{} {
-	_, field := instance.class.ResolveField(*name, *desc)
+func (instance *Instance) GetField(name, desc string) interface{} {
+	_, field := instance.class.ResolveField(name, desc)
 
 	value := instance.fields[field.ID()]
 	if value == nil && !field.NullableDefaultValue() {
@@ -124,13 +126,13 @@ func (instance *Instance) GetField(name, desc *string) interface{} {
 	return value
 }
 
-func (instance *Instance) GetFieldByID(id int) interface{} {
-	return instance.fields[id]
+func (instance *Instance) PutField(name, desc string, value interface{}) {
+	_, field := instance.class.ResolveField(name, desc)
+	instance.fields[field.ID()] = value
 }
 
-func (instance *Instance) PutField(name, desc *string, value interface{}) {
-	_, field := instance.class.ResolveField(*name, *desc)
-	instance.fields[field.ID()] = value
+func (instance *Instance) GetFieldByID(id int) interface{} {
+	return instance.fields[id]
 }
 
 func (instance *Instance) PutFieldByID(id int, value interface{}) {
@@ -160,9 +162,7 @@ func (instance *Instance) AsFile() *os.File {
 		return instance.vmData.(*os.File)
 	}
 
-	fdName := "fd"
-	fdDesc := "I"
-	fd := instance.GetField(&fdName, &fdDesc).(int32)
+	fd := instance.GetField("fd", "I").(int32)
 	file := os.NewFile(uintptr(fd), "")
 
 	instance.vmData = file
@@ -172,8 +172,7 @@ func (instance *Instance) AsFile() *os.File {
 // Utility method to get value of char array field as string.
 // e.g., 'value' field of java.lang.String, 'name' field of java.lang.Thread.
 func (instance *Instance) GetCharArrayField(name string) string {
-	desc := "[C"
-	slice := instance.GetField(&name, &desc).(*Instance).AsArray()
+	slice := instance.GetField(name, "[C").(*Instance).AsArray()
 
 	u16 := make([]uint16, len(slice))
 	for i := 0; i < len(slice); i++ {
@@ -187,20 +186,10 @@ func (instance *Instance) Clone() *Instance {
 	fields := make([]interface{}, len(instance.fields))
 	copy(fields, instance.fields)
 
-	clone := &Instance{
+	return &Instance{
 		class:   instance.class,
 		fields:  fields,
 		monitor: NewMonitor(),
 		vmData:  instance.vmData,
 	}
-
-	if instance.class.IsArray() {
-		srcArray := instance.AsArray()
-		dstArray := make([]interface{}, len(srcArray))
-		copy(dstArray, srcArray)
-
-		clone.vmData = dstArray
-	}
-
-	return clone
 }

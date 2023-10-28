@@ -20,10 +20,7 @@ func UnixFileSystemCanonicalize0(thread *vm.Thread, args []interface{}) error {
 
 func UnixFileSystemCheckAccess(thread *vm.Thread, args []interface{}) error {
 	file := args[1].(*vm.Instance)
-
-	pathName := "path"
-	pathDesc := "Ljava/lang/String;"
-	path := file.GetField(&pathName, &pathDesc).(*vm.Instance).GetCharArrayField("value")
+	path := file.GetField("path", "Ljava/lang/String;").(*vm.Instance).GetCharArrayField("value")
 
 	ret := int32(1)
 	if err := syscall.Access(path, uint32(args[2].(int32))); err != nil {
@@ -36,10 +33,7 @@ func UnixFileSystemCheckAccess(thread *vm.Thread, args []interface{}) error {
 
 func UnixFileSystemGetBooleanAttributes0(thread *vm.Thread, args []interface{}) error {
 	file := args[1].(*vm.Instance)
-
-	pathName := "path"
-	pathDesc := "Ljava/lang/String;"
-	path := file.GetField(&pathName, &pathDesc).(*vm.Instance).GetCharArrayField("value")
+	path := file.GetField("path", "Ljava/lang/String;").(*vm.Instance).GetCharArrayField("value")
 
 	stat, err := os.Stat(path)
 	if err != nil {

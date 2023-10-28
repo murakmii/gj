@@ -6,11 +6,6 @@ import (
 
 type GoString string
 
-var (
-	javaLangStringValueField = "value"
-	javaLangStringValueDesc  = "[C"
-)
-
 func (s GoString) ToJavaString(vm *VM) *Instance {
 	js := NewInstance(vm.StdClass(JavaLangString))
 
@@ -21,7 +16,7 @@ func (s GoString) ToJavaString(vm *VM) *Instance {
 		slice[i] = int32(e)
 	}
 
-	js.PutField(&javaLangStringValueField, &javaLangStringValueDesc, instance)
+	js.PutField("value", "[C", instance)
 	return js
 }
 
