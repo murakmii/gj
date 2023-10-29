@@ -3,7 +3,7 @@ package misc
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/murakmii/gj/vm"
+	"github.com/murakmii/gojiai/vm"
 	"unsafe"
 )
 

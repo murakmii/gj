@@ -2,7 +2,7 @@ package vm
 
 import (
 	"fmt"
-	"github.com/murakmii/gj"
+	"github.com/murakmii/gojiai"
 	"sync"
 )
 
@@ -10,7 +10,7 @@ type (
 	VM struct {
 		sysProps map[string]string
 
-		classPaths        []gj.ClassPath
+		classPaths        []gojiai.ClassPath
 		classCache        map[string]*Class
 		specialClassCache []*Class
 		classLock         *sync.Mutex
@@ -24,7 +24,7 @@ type (
 	}
 )
 
-func InitVM(config *gj.Config) (*VM, error) {
+func InitVM(config *gojiai.Config) (*VM, error) {
 	var err error
 	vm := &VM{
 		sysProps:          config.SysProps,
@@ -37,7 +37,7 @@ func InitVM(config *gj.Config) (*VM, error) {
 	}
 	vm.mainThread = NewThread(vm, "main", true, false)
 
-	vm.classPaths, err = gj.InitClassPaths(config.ClassPath)
+	vm.classPaths, err = gojiai.InitClassPaths(config.ClassPath)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,6 @@
 package class_file
 
-import "github.com/murakmii/gj/util"
+import "github.com/murakmii/gojiai/util"
 
 type (
 	CodeAttr struct {

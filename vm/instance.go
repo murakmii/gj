@@ -2,7 +2,7 @@ package vm
 
 import (
 	"fmt"
-	"github.com/murakmii/gj/class_file"
+	"github.com/murakmii/gojiai/class_file"
 	"os"
 	"strings"
 	"unicode/utf16"

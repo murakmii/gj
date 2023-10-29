@@ -1,6 +1,6 @@
 package io
 
-import "github.com/murakmii/gj/vm"
+import "github.com/murakmii/gojiai/vm"
 
 func init() {
 	class := "java/io/FileDescriptor"

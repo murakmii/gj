@@ -1,7 +1,7 @@
 package zip
 
 import (
-	"github.com/murakmii/gj/vm"
+	"github.com/murakmii/gojiai/vm"
 	"hash/crc32"
 )
 

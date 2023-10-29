@@ -2,7 +2,7 @@ package io
 
 import (
 	"errors"
-	"github.com/murakmii/gj/vm"
+	"github.com/murakmii/gojiai/vm"
 	"io"
 	"os"
 )

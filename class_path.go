@@ -1,10 +1,10 @@
-package gj
+package gojiai
 
 import (
 	"archive/zip"
 	"errors"
 	"fmt"
-	"github.com/murakmii/gj/class_file"
+	"github.com/murakmii/gojiai/class_file"
 	"io/fs"
 	"os"
 	"path/filepath"

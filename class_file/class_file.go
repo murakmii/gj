@@ -3,7 +3,7 @@ package class_file
 import (
 	"bytes"
 	"fmt"
-	"github.com/murakmii/gj/util"
+	"github.com/murakmii/gojiai/util"
 	"io"
 	"os"
 	"sort"

@@ -2,8 +2,8 @@ package vm
 
 import (
 	"bytes"
-	"github.com/murakmii/gj/class_file"
-	"github.com/murakmii/gj/util"
+	"github.com/murakmii/gojiai/class_file"
+	"github.com/murakmii/gojiai/util"
 )
 
 type (

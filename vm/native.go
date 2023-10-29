@@ -1,7 +1,7 @@
 package vm
 
 import (
-	"github.com/murakmii/gj/class_file"
+	"github.com/murakmii/gojiai/class_file"
 	"sync"
 )
 

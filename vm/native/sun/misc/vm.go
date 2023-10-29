@@ -1,6 +1,6 @@
 package misc
 
-import "github.com/murakmii/gj/vm"
+import "github.com/murakmii/gojiai/vm"
 
 func init() {
 	class := "sun/misc/VM"

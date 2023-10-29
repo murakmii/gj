@@ -1,7 +1,7 @@
 package misc
 
 import (
-	"github.com/murakmii/gj/vm"
+	"github.com/murakmii/gojiai/vm"
 	"os"
 	"syscall"
 )

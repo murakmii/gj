@@ -2,7 +2,7 @@ package lang
 
 import (
 	"fmt"
-	"github.com/murakmii/gj/vm"
+	"github.com/murakmii/gojiai/vm"
 )
 
 func init() {

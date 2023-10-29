@@ -1,4 +1,4 @@
-module github.com/murakmii/gj
+module github.com/murakmii/gojiai
 
 go 1.19
 

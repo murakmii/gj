@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/murakmii/gj"
-	"github.com/murakmii/gj/vm"
-	_ "github.com/murakmii/gj/vm/native"
+	"github.com/murakmii/gojiai"
+	"github.com/murakmii/gojiai/vm"
+	_ "github.com/murakmii/gojiai/vm/native"
 	"os"
 	"strings"
 	"time"
@@ -37,7 +37,7 @@ func main() {
 		return
 	}
 
-	classPaths, err := gj.InitClassPaths(config.ClassPath)
+	classPaths, err := gojiai.InitClassPaths(config.ClassPath)
 	if err != nil {
 		fmt.Printf("failed to init class path: %s", err)
 		return
@@ -55,17 +55,17 @@ func main() {
 	}
 }
 
-func readConfig() (*gj.Config, error) {
+func readConfig() (*gojiai.Config, error) {
 	f, err := os.Open(configPath)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	return gj.ReadConfig(f)
+	return gojiai.ReadConfig(f)
 }
 
-func execPrint(classPaths []gj.ClassPath) {
+func execPrint(classPaths []gojiai.ClassPath) {
 	for _, classPath := range classPaths {
 		classFile, err := classPath.SearchClass(mainClass + ".class")
 		if err != nil {
@@ -84,7 +84,7 @@ func execPrint(classPaths []gj.ClassPath) {
 	fmt.Println("class not found")
 }
 
-func execVM(config *gj.Config) {
+func execVM(config *gojiai.Config) {
 	start := time.Now().UnixMilli()
 	vmInstance, err := vm.InitVM(config)
 	if err != nil {

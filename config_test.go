@@ -1,4 +1,4 @@
-package gj
+package gojiai
 
 import (
 	"bytes"

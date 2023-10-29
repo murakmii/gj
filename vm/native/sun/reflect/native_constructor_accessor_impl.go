@@ -1,7 +1,7 @@
 package reflect
 
 import (
-	"github.com/murakmii/gj/vm"
+	"github.com/murakmii/gojiai/vm"
 )
 
 func init() {

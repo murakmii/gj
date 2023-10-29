@@ -2,8 +2,8 @@ package lang
 
 import (
 	"fmt"
-	"github.com/murakmii/gj/class_file"
-	"github.com/murakmii/gj/vm"
+	"github.com/murakmii/gojiai/class_file"
+	"github.com/murakmii/gojiai/vm"
 	"strings"
 )
 
