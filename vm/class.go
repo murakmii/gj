@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"fmt"
 	"github.com/murakmii/gj/class_file"
 	"sync"
 )
@@ -259,10 +258,7 @@ func (class *Class) initialize(curThread *Thread) error {
 
 			switch cv := constVal.(type) {
 			case *string:
-				class.fields[f.ID()], err = curThread.VM().JavaString(curThread, cv)
-				if err != nil {
-					return fmt.Errorf("failed to set default string value of static field: %s", err)
-				}
+				class.fields[f.ID()] = curThread.VM().JavaString(*cv)
 			default:
 				class.fields[f.ID()] = cv
 			}

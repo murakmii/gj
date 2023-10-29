@@ -190,12 +190,12 @@ func (trace *StackTraceElement) ToJava(vm *VM) *Instance {
 
 	javaTrace := NewInstance(traceClass)
 
-	javaTrace.PutField("declaringClass", "Ljava/lang/String;", GoString(trace.class).ToJavaString(vm))
-	javaTrace.PutField("methodName", "Ljava/lang/String;", GoString(trace.method).ToJavaString(vm))
+	javaTrace.PutField("declaringClass", "Ljava/lang/String;", NewString(vm, trace.class))
+	javaTrace.PutField("methodName", "Ljava/lang/String;", NewString(vm, trace.method))
 	javaTrace.PutField("lineNumber", "I", trace.line)
 
 	if trace.file != nil {
-		javaTrace.PutField("fileName", "Ljava/lang/String;", GoString(*trace.file).ToJavaString(vm))
+		javaTrace.PutField("fileName", "Ljava/lang/String;", NewString(vm, *trace.file))
 	}
 
 	return javaTrace

@@ -67,7 +67,7 @@ func init() {
 			var signature *vm.Instance
 			sig, ok := c.Signature()
 			if ok {
-				signature = vm.GoString(*class.File().ConstantPool().Utf8(uint16(sig))).ToJavaString(thread.VM())
+				signature = vm.NewString(thread.VM(), *class.File().ConstantPool().Utf8(uint16(sig)))
 			}
 
 			params := c.Descriptor().Params()
@@ -141,7 +141,7 @@ func init() {
 			var signature *vm.Instance
 			sig, ok := f.Signature()
 			if ok {
-				signature = vm.GoString(*targetClass.File().ConstantPool().Utf8(uint16(sig))).ToJavaString(thread.VM())
+				signature = vm.NewString(thread.VM(), *targetClass.File().ConstantPool().Utf8(uint16(sig)))
 			}
 
 			descClass, err := thread.VM().Class(f.Descriptor().Type(), thread)
@@ -152,7 +152,7 @@ func init() {
 			err = thread.Execute(vm.NewFrame(fieldClass, cstr).SetLocals([]interface{}{
 				fInstance,
 				class,
-				thread.VM().JavaString2(thread, f.Name()),
+				thread.VM().JavaString(*(f.Name())),
 				descClass.Java(),
 				int32(f.AccessFlag()),
 				int32(f.ID()),
@@ -214,12 +214,7 @@ func init() {
 			name = name[1 : len(name)-1]
 		}
 
-		nameJS, err := thread.VM().JavaString(thread, &name)
-		if err != nil {
-			return err
-		}
-
-		thread.CurrentFrame().PushOperand(nameJS)
+		thread.CurrentFrame().PushOperand(thread.VM().JavaString(name))
 		return nil
 	})
 

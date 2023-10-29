@@ -290,11 +290,7 @@ func instrLdc(idxLoader func(*Frame) uint16) Instruction {
 			frame.PushOperand(entry)
 
 		case class_file.StringCpInfo:
-			js, err := thread.VM().JavaString(thread, frame.CurrentClass().File().ConstantPool().Utf8(uint16(entry)))
-			if err != nil {
-				return err
-			}
-			frame.PushOperand(js)
+			frame.PushOperand(thread.VM().JavaString(*(frame.CurrentClass().File().ConstantPool().Utf8(uint16(entry)))))
 
 		case class_file.ClassCpInfo:
 			name := frame.CurrentClass().File().ConstantPool().Utf8(uint16(entry))

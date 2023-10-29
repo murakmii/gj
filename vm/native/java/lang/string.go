@@ -9,13 +9,7 @@ func init() {
 
 	vm.NativeMethods.Register(class, "intern", "()Ljava/lang/String;", func(thread *vm.Thread, args []interface{}) error {
 		gs := args[0].(*vm.Instance).AsString()
-
-		interned, err := thread.VM().JavaString(thread, &gs)
-		if err != nil {
-			return err
-		}
-
-		thread.CurrentFrame().PushOperand(interned)
+		thread.CurrentFrame().PushOperand(thread.VM().JavaString(gs))
 		return nil
 	})
 }

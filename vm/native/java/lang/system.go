@@ -43,18 +43,11 @@ func init() {
 		class, method := props.Class().ResolveMethod("setProperty", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;")
 
 		for k, v := range thread.VM().SysProps() {
-			kJS, err := thread.VM().JavaString(thread, &k)
-			if err != nil {
-				return fmt.Errorf("failed to instantiate string for system prorperty key")
-			}
-
-			vJS, err := thread.VM().JavaString(thread, &v)
-			if err != nil {
-				return fmt.Errorf("failed to instantiate string for system prorperty value")
-			}
-
-			err = thread.Execute(vm.NewFrame(class, method).SetLocals([]interface{}{props, kJS, vJS}))
-			if err != nil {
+			if err := thread.Execute(vm.NewFrame(class, method).SetLocals([]interface{}{
+				props,
+				thread.VM().JavaString(k),
+				thread.VM().JavaString(v),
+			})); err != nil {
 				return err
 			}
 		}

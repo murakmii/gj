@@ -1,25 +1,5 @@
 package vm
 
-import (
-	"unicode/utf16"
-)
-
-type GoString string
-
-func (s GoString) ToJavaString(vm *VM) *Instance {
-	js := NewInstance(vm.SpecialClass(JavaLangStringID))
-
-	u16 := utf16.Encode([]rune(s))
-	instance, slice := NewArray(vm, "[C", len(u16))
-
-	for i, e := range u16 {
-		slice[i] = int32(e)
-	}
-
-	js.PutField("value", "[C", instance)
-	return js
-}
-
 func ByteSliceToJavaArray(vm *VM, bytes []byte) *Instance {
 	instance, slice := NewArray(vm, "[B", len(bytes))
 	for i, b := range bytes {

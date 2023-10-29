@@ -164,25 +164,15 @@ func (vm *VM) Class(className string, thread *Thread) (*Class, error) {
 	return class, nil
 }
 
-func (vm *VM) JavaString2(thread *Thread, s *string) *Instance {
-	if cache, ok := vm.javaStringCache[*s]; ok {
+func (vm *VM) JavaString(s string) *Instance {
+	// TODO: lock
+	if cache, ok := vm.javaStringCache[s]; ok {
 		return cache
 	}
 
-	js := GoString(*s).ToJavaString(vm)
-	vm.javaStringCache[*s] = js
+	js := NewString(vm, s)
+	vm.javaStringCache[s] = js
 	return js
-}
-
-func (vm *VM) JavaString(thread *Thread, s *string) (*Instance, error) {
-	// TODO: lock
-	if cache, ok := vm.javaStringCache[*s]; ok {
-		return cache, nil
-	}
-
-	js := GoString(*s).ToJavaString(vm)
-	vm.javaStringCache[*s] = js
-	return js, nil
 }
 
 func (vm *VM) ExecMain(className string, args []string) error {
@@ -198,7 +188,7 @@ func (vm *VM) ExecMain(className string, args []string) error {
 
 	array, slice := NewArray(vm, "[Ljava/lang/String;", len(args))
 	for i := range slice {
-		slice[i] = GoString(args[i]).ToJavaString(vm)
+		slice[i] = NewString(vm, args[i])
 	}
 
 	vm.executor.Start(vm.mainThread, NewFrame(class, main).SetLocal(0, array))
@@ -234,11 +224,7 @@ func (vm *VM) initializeMainThread() error {
 	}
 
 	// Create main thread group.
-	mainStr := "main"
-	mainJs, err := vm.JavaString(vm.mainThread, &mainStr)
-	if err != nil {
-		return err
-	}
+	mainJs := vm.JavaString("main")
 
 	mainTg := NewInstance(tgClass)
 	frame = NewFrame(tgClass, tgClass.File().FindMethod("<init>", "(Ljava/lang/ThreadGroup;Ljava/lang/String;)V")).

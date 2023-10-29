@@ -44,9 +44,7 @@ func CreateJavaError(thread *Thread, className, message string) error {
 	}
 
 	ex := NewInstance(exClass)
-	err = thread.Execute(NewFrame(constrClass, constr).SetLocals([]interface{}{
-		ex, GoString(message).ToJavaString(thread.VM()),
-	}))
+	err = thread.Execute(NewFrame(constrClass, constr).SetLocals([]interface{}{ex, NewString(thread.VM(), message)}))
 	if err != nil {
 		return err
 	}

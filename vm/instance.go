@@ -50,6 +50,20 @@ func NewArray(vm *VM, desc string, size int) (*Instance, []interface{}) {
 	}, array
 }
 
+func NewString(vm *VM, str string) *Instance {
+	javaStr := NewInstance(vm.SpecialClass(JavaLangStringID))
+
+	u16 := utf16.Encode([]rune(str))
+	instance, slice := NewArray(vm, "[C", len(u16))
+
+	for i, e := range u16 {
+		slice[i] = int32(e)
+	}
+
+	javaStr.PutField("value", "[C", instance)
+	return javaStr
+}
+
 func (instance *Instance) Class() *Class {
 	return instance.class
 }
