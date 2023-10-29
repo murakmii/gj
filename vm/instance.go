@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"unicode/utf16"
+	"unsafe"
 )
 
 type (
@@ -209,6 +210,10 @@ func (instance *Instance) AsFile() *os.File {
 func (instance *Instance) ToBeFile(file *os.File) {
 	instance.PutField("fd", "I", int32(file.Fd()))
 	instance.vmData = file
+}
+
+func (instance *Instance) HashCode() int32 {
+	return int32(uintptr(unsafe.Pointer(instance)))
 }
 
 func (instance *Instance) Clone() *Instance {

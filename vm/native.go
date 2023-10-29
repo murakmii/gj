@@ -1,25 +1,36 @@
 package vm
 
 import (
-	"fmt"
 	"github.com/murakmii/gj/class_file"
+	"sync"
 )
 
 type (
-	NativeMethodFunc = func(thread *Thread, args []interface{}) error
+	NativeMethodFunc     func(thread *Thread, args []interface{}) error
+	NativeMethodRegistry struct {
+		lock  *sync.Mutex
+		cache map[*class_file.MethodInfo]NativeMethodFunc
+		reg   map[string]NativeMethodFunc
+	}
 )
 
-var nativeMethods = make(map[string]NativeMethodFunc)
+var (
+	NopNativeMethod NativeMethodFunc = func(_ *Thread, _ []interface{}) error { return nil }
+	NativeMethods                    = &NativeMethodRegistry{
+		lock:  &sync.Mutex{},
+		cache: make(map[*class_file.MethodInfo]NativeMethodFunc),
+		reg:   make(map[string]NativeMethodFunc),
+	}
+)
 
-func RegisterNativeMethod(id string, method NativeMethodFunc) {
-	nativeMethods[id] = method
+func (registry NativeMethodRegistry) Register(class, method, desc string, f NativeMethodFunc) {
+	// Native methods indexed by class name, method name and method descriptor
+	key := class + "/" + method + desc
+
+	registry.reg[key] = f
 }
 
-func CallNativeMethod(thread *Thread, class *Class, method *class_file.MethodInfo, args []interface{}) error {
-	id := class.File().ThisClass() + "/" + *method.Name() + method.Descriptor().String()
-	native, exist := nativeMethods[id]
-	if !exist {
-		return fmt.Errorf("native method not found: %s", id)
-	}
-	return native(thread, args)
+func (registry NativeMethodRegistry) Resolve(class string, method *class_file.MethodInfo) NativeMethodFunc {
+	key := class + "/" + *(method.Name()) + method.Descriptor().String()
+	return registry.reg[key]
 }

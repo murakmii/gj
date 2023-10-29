@@ -4,14 +4,18 @@ import (
 	"github.com/murakmii/gj/vm"
 )
 
-func StringIntern(thread *vm.Thread, args []interface{}) error {
-	gs := args[0].(*vm.Instance).AsString()
+func init() {
+	class := "java/lang/String"
 
-	interned, err := thread.VM().JavaString(thread, &gs)
-	if err != nil {
-		return err
-	}
+	vm.NativeMethods.Register(class, "intern", "()Ljava/lang/String;", func(thread *vm.Thread, args []interface{}) error {
+		gs := args[0].(*vm.Instance).AsString()
 
-	thread.CurrentFrame().PushOperand(interned)
-	return nil
+		interned, err := thread.VM().JavaString(thread, &gs)
+		if err != nil {
+			return err
+		}
+
+		thread.CurrentFrame().PushOperand(interned)
+		return nil
+	})
 }

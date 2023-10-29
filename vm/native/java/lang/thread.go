@@ -5,41 +5,48 @@ import (
 	"time"
 )
 
-func ThreadCurrentThread(thread *vm.Thread, args []interface{}) error {
-	thread.CurrentFrame().PushOperand(thread.JavaThread())
-	return nil
-}
+func init() {
+	class := "java/lang/Thread"
 
-func ThreadIsAlive(callerThread *vm.Thread, args []interface{}) error {
-	thread := args[0].(*vm.Instance).AsThread()
-	var alive int32
-	if thread != nil && thread.IsAlive() {
-		alive = 1
-	}
+	vm.NativeMethods.Register(class, "currentThread", "()Ljava/lang/Thread;", func(thread *vm.Thread, args []interface{}) error {
+		thread.CurrentFrame().PushOperand(thread.JavaThread())
+		return nil
+	})
 
-	callerThread.CurrentFrame().PushOperand(alive)
-	return nil
-}
+	vm.NativeMethods.Register(class, "isAlive", "()Z", func(caller *vm.Thread, args []interface{}) error {
+		thread := args[0].(*vm.Instance).AsThread()
+		var alive int32
+		if thread != nil && thread.IsAlive() {
+			alive = 1
+		}
 
-func ThreadStart0(callerThread *vm.Thread, args []interface{}) error {
-	java := args[0].(*vm.Instance)
+		caller.CurrentFrame().PushOperand(alive)
+		return nil
+	})
 
-	daemon := java.GetField("daemon", "Z").(int32)
-	name := java.GetField("name", "Ljava/lang/String;").(*vm.Instance)
+	vm.NativeMethods.Register(class, "registerNatives", "()V", vm.NopNativeMethod)
+	vm.NativeMethods.Register(class, "setPriority0", "(I)V", vm.NopNativeMethod)
 
-	thread := vm.NewThread(callerThread.VM(), name.AsString(), false, daemon == 1)
-	thread.SetJavaThread(java)
+	vm.NativeMethods.Register(class, "sleep", "(J)V", func(thread *vm.Thread, args []interface{}) error {
+		time.Sleep(time.Millisecond * time.Duration(args[0].(int64)))
+		return nil
+	})
 
-	java.ToBeThread(thread)
-	java.PutField("threadStatus", "I", int32(0x04))
+	vm.NativeMethods.Register(class, "start0", "()V", func(caller *vm.Thread, args []interface{}) error {
+		java := args[0].(*vm.Instance)
 
-	class, method := java.Class().ResolveMethod("run", "()V")
-	thread.VM().Executor().Start(thread, vm.NewFrame(class, method).SetLocal(0, java))
+		daemon := java.GetField("daemon", "Z").(int32)
+		name := java.GetField("name", "Ljava/lang/String;").(*vm.Instance)
 
-	return nil
-}
+		thread := vm.NewThread(caller.VM(), name.AsString(), false, daemon == 1)
+		thread.SetJavaThread(java)
 
-func ThreadSleep(_ *vm.Thread, args []interface{}) error {
-	time.Sleep(time.Millisecond * time.Duration(args[0].(int64)))
-	return nil
+		java.ToBeThread(thread)
+		java.PutField("threadStatus", "I", int32(0x04))
+
+		class, method := java.Class().ResolveMethod("run", "()V")
+		thread.VM().Executor().Start(thread, vm.NewFrame(class, method).SetLocal(0, java))
+
+		return nil
+	})
 }

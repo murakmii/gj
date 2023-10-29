@@ -1,37 +1,36 @@
 package lang
 
 import (
-	"fmt"
 	"github.com/murakmii/gj/vm"
-	"unsafe"
 )
 
-func ObjectClone(thread *vm.Thread, args []interface{}) error {
-	thread.CurrentFrame().PushOperand(args[0].(*vm.Instance).Clone())
-	return nil
-}
+func init() {
+	class := "java/lang/Object"
 
-func ObjectHashCode(thread *vm.Thread, args []interface{}) error {
-	instance, ok := args[0].(*vm.Instance)
-	if !ok {
-		return fmt.Errorf("arg for Object.hashCode is NOT instance")
-	}
+	vm.NativeMethods.Register(class, "clone", "()Ljava/lang/Object;", func(thread *vm.Thread, args []interface{}) error {
+		thread.CurrentFrame().PushOperand(args[0].(*vm.Instance).Clone())
+		return nil
+	})
 
-	thread.CurrentFrame().PushOperand(int32(uintptr(unsafe.Pointer(instance))))
-	return nil
-}
+	vm.NativeMethods.Register(class, "getClass", "()Ljava/lang/Class;", func(thread *vm.Thread, args []interface{}) error {
+		thread.CurrentFrame().PushOperand(args[0].(*vm.Instance).Class().Java())
+		return nil
+	})
 
-func ObjectGetClass(thread *vm.Thread, args []interface{}) error {
-	thread.CurrentFrame().PushOperand(args[0].(*vm.Instance).Class().Java())
-	return nil
-}
+	vm.NativeMethods.Register(class, "hashCode", "()I", func(thread *vm.Thread, args []interface{}) error {
+		thread.CurrentFrame().PushOperand(args[0].(*vm.Instance).HashCode())
+		return nil
+	})
 
-func ObjectWait(thread *vm.Thread, args []interface{}) error {
-	// TODO: interrupt
-	_, err := args[0].(*vm.Instance).Monitor().Wait(thread, int(args[1].(int64)))
-	return err
-}
+	vm.NativeMethods.Register(class, "notifyAll", "()V", func(thread *vm.Thread, args []interface{}) error {
+		return args[0].(*vm.Instance).Monitor().NotifyAll(thread)
+	})
 
-func ObjectNotifyAll(thread *vm.Thread, args []interface{}) error {
-	return args[0].(*vm.Instance).Monitor().NotifyAll(thread)
+	vm.NativeMethods.Register(class, "registerNatives", "()V", vm.NopNativeMethod)
+
+	vm.NativeMethods.Register(class, "wait", "(J)V", func(thread *vm.Thread, args []interface{}) error {
+		// TODO: interrupt
+		_, err := args[0].(*vm.Instance).Monitor().Wait(thread, int(args[1].(int64)))
+		return err
+	})
 }

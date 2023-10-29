@@ -13,44 +13,50 @@ const (
 	ufsBADirectory = int32(0x04)
 )
 
-func UnixFileSystemCanonicalize0(thread *vm.Thread, args []interface{}) error {
-	thread.CurrentFrame().PushOperand(args[1]) // nop
-	return nil
-}
+func init() {
+	class := "java/io/UnixFileSystem"
 
-func UnixFileSystemCheckAccess(thread *vm.Thread, args []interface{}) error {
-	file := args[1].(*vm.Instance)
-	path := file.GetField("path", "Ljava/lang/String;").(*vm.Instance).AsString()
+	vm.NativeMethods.Register(class, "initIDs", "()V", vm.NopNativeMethod)
 
-	ret := int32(1)
-	if err := syscall.Access(path, uint32(args[2].(int32))); err != nil {
-		ret = 0
-	}
+	vm.NativeMethods.Register(class, "canonicalize0", "(Ljava/lang/String;)Ljava/lang/String;", func(thread *vm.Thread, args []interface{}) error {
+		thread.CurrentFrame().PushOperand(args[1]) // nop
+		return nil
+	})
 
-	thread.CurrentFrame().PushOperand(ret)
-	return nil
-}
+	vm.NativeMethods.Register(class, "checkAccess", "(Ljava/io/File;I)Z", func(thread *vm.Thread, args []interface{}) error {
+		file := args[1].(*vm.Instance)
+		path := file.GetField("path", "Ljava/lang/String;").(*vm.Instance).AsString()
 
-func UnixFileSystemGetBooleanAttributes0(thread *vm.Thread, args []interface{}) error {
-	file := args[1].(*vm.Instance)
-	path := file.GetField("path", "Ljava/lang/String;").(*vm.Instance).AsString()
-
-	stat, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			thread.CurrentFrame().PushOperand(int32(0))
-			return nil
+		ret := int32(1)
+		if err := syscall.Access(path, uint32(args[2].(int32))); err != nil {
+			ret = 0
 		}
-		return err
-	}
 
-	ba := ufsBAExists
-	if stat.IsDir() {
-		ba |= ufsBADirectory
-	} else {
-		ba |= ufsBARegular
-	}
+		thread.CurrentFrame().PushOperand(ret)
+		return nil
+	})
 
-	thread.CurrentFrame().PushOperand(ba)
-	return nil
+	vm.NativeMethods.Register(class, "getBooleanAttributes0", "(Ljava/io/File;)I", func(thread *vm.Thread, args []interface{}) error {
+		file := args[1].(*vm.Instance)
+		path := file.GetField("path", "Ljava/lang/String;").(*vm.Instance).AsString()
+
+		stat, err := os.Stat(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				thread.CurrentFrame().PushOperand(int32(0))
+				return nil
+			}
+			return err
+		}
+
+		ba := ufsBAExists
+		if stat.IsDir() {
+			ba |= ufsBADirectory
+		} else {
+			ba |= ufsBARegular
+		}
+
+		thread.CurrentFrame().PushOperand(ba)
+		return nil
+	})
 }

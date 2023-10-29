@@ -5,40 +5,44 @@ import (
 	"github.com/murakmii/gj/vm"
 )
 
-func ThrowableFillInStackTrace(thread *vm.Thread, args []interface{}) error {
-	traces := thread.StackTrack()
-	traceArray, traceSlice := vm.NewArray(thread.VM(), "[Ljava/lang/StackTraceElement;", len(traces))
+func init() {
+	class := "java/lang/Throwable"
 
-	for i, t := range traces {
-		traceSlice[i] = t.ToJava(thread.VM())
-	}
+	vm.NativeMethods.Register(class, "fillInStackTrace", "(I)Ljava/lang/Throwable;", func(thread *vm.Thread, args []interface{}) error {
+		traces := thread.StackTrack()
+		traceArray, traceSlice := vm.NewArray(thread.VM(), "[Ljava/lang/StackTraceElement;", len(traces))
 
-	throwable := args[0].(*vm.Instance)
-	throwable.PutField("stackTrace", "[Ljava/lang/StackTraceElement;", traceArray)
-	throwable.ToBeThrowable(traces)
+		for i, t := range traces {
+			traceSlice[i] = t.ToJava(thread.VM())
+		}
 
-	thread.CurrentFrame().PushOperand(throwable)
-	return nil
-}
+		throwable := args[0].(*vm.Instance)
+		throwable.PutField("stackTrace", "[Ljava/lang/StackTraceElement;", traceArray)
+		throwable.ToBeThrowable(traces)
 
-func ThrowableGetStackTraceDepth(thread *vm.Thread, args []interface{}) error {
-	depth := int32(0)
-	if traces := args[0].(*vm.Instance).AsThrowable(); traces != nil {
-		depth = int32(len(traces))
-	}
+		thread.CurrentFrame().PushOperand(throwable)
+		return nil
+	})
 
-	thread.CurrentFrame().PushOperand(depth)
-	return nil
-}
+	vm.NativeMethods.Register(class, "getStackTraceDepth", "()I", func(thread *vm.Thread, args []interface{}) error {
+		depth := int32(0)
+		if traces := args[0].(*vm.Instance).AsThrowable(); traces != nil {
+			depth = int32(len(traces))
+		}
 
-func ThrowableGetStackTraceElement(thread *vm.Thread, args []interface{}) error {
-	traces := args[0].(*vm.Instance).AsThrowable()
-	index := args[1].(int32)
+		thread.CurrentFrame().PushOperand(depth)
+		return nil
+	})
 
-	if index < 0 || index >= int32(len(traces)) {
-		return fmt.Errorf("index out of bounds")
-	}
+	vm.NativeMethods.Register(class, "getStackTraceElement", "(I)Ljava/lang/StackTraceElement;", func(thread *vm.Thread, args []interface{}) error {
+		traces := args[0].(*vm.Instance).AsThrowable()
+		index := args[1].(int32)
 
-	thread.CurrentFrame().PushOperand(traces[index].ToJava(thread.VM()))
-	return nil
+		if index < 0 || index >= int32(len(traces)) {
+			return fmt.Errorf("index out of bounds")
+		}
+
+		thread.CurrentFrame().PushOperand(traces[index].ToJava(thread.VM()))
+		return nil
+	})
 }

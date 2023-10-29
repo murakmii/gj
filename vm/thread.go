@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"fmt"
 	"github.com/murakmii/gj/class_file"
 	"sync"
 )
@@ -107,7 +108,11 @@ func (thread *Thread) ExecMethod(class *Class, method *class_file.MethodInfo) er
 	args := curFrame.PopOperands(method.NumArgs())
 
 	if method.IsNative() {
-		return CallNativeMethod(thread, class, method, args)
+		native := NativeMethods.Resolve(class.File().ThisClass(), method)
+		if native == nil {
+			return fmt.Errorf("native method not found: %s.%s%s", class.File().ThisClass(), *(method.Name()), method.Descriptor())
+		}
+		return native(thread, args)
 	}
 
 	thread.PushFrame(NewFrame(class, method).SetLocals(args))

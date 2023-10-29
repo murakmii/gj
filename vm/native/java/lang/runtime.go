@@ -5,7 +5,11 @@ import (
 	"runtime"
 )
 
-func RuntimeGetAvailableProcessors(thread *vm.Thread, _ []interface{}) error {
-	thread.CurrentFrame().PushOperand(int32(runtime.NumCPU()))
-	return nil
+func init() {
+	class := "java/lang/Runtime"
+
+	vm.NativeMethods.Register(class, "availableProcessors", "()I", func(thread *vm.Thread, args []interface{}) error {
+		thread.CurrentFrame().PushOperand(int32(runtime.NumCPU()))
+		return nil
+	})
 }

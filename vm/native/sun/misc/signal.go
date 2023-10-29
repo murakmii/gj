@@ -6,24 +6,28 @@ import (
 	"syscall"
 )
 
-var signals = map[string]os.Signal{
-	"HUP":  syscall.SIGHUP,
-	"TERM": syscall.SIGTERM,
-	"INT":  syscall.SIGINT,
-}
+func init() {
+	class := "sun/misc/Signal"
 
-func SignalFindSignal(thread *vm.Thread, args []interface{}) error {
-	sig, exist := signals[args[0].(*vm.Instance).AsString()]
-	if !exist {
-		sig = syscall.Signal(-1)
+	signals := map[string]os.Signal{
+		"HUP":  syscall.SIGHUP,
+		"TERM": syscall.SIGTERM,
+		"INT":  syscall.SIGINT,
 	}
 
-	thread.CurrentFrame().PushOperand(int32(sig.(syscall.Signal)))
-	return nil
-}
+	vm.NativeMethods.Register(class, "findSignal", "(Ljava/lang/String;)I", func(thread *vm.Thread, args []interface{}) error {
+		sig, exist := signals[args[0].(*vm.Instance).AsString()]
+		if !exist {
+			sig = syscall.Signal(-1)
+		}
 
-func SignalHandle(thread *vm.Thread, _ []interface{}) error {
-	// TODO save handler number
-	thread.CurrentFrame().PushOperand(int64(0))
-	return nil
+		thread.CurrentFrame().PushOperand(int32(sig.(syscall.Signal)))
+		return nil
+	})
+
+	vm.NativeMethods.Register(class, "handle0", "(IJ)J", func(thread *vm.Thread, args []interface{}) error {
+		// TODO save handler number
+		thread.CurrentFrame().PushOperand(int64(0))
+		return nil
+	})
 }

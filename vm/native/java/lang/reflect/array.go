@@ -2,11 +2,15 @@ package reflect
 
 import "github.com/murakmii/gj/vm"
 
-func ArrayNewArray(thread *vm.Thread, args []interface{}) error {
-	compType := args[0].(*vm.Instance).AsClass().File().ThisClass()
-	size := args[1].(int32)
-	array, _ := vm.NewArray(thread.VM(), "["+compType, int(size))
+func init() {
+	class := "java/lang/reflect/Array"
 
-	thread.CurrentFrame().PushOperand(array)
-	return nil
+	vm.NativeMethods.Register(class, "newArray", "(Ljava/lang/Class;I)Ljava/lang/Object;", func(thread *vm.Thread, args []interface{}) error {
+		compType := args[0].(*vm.Instance).AsClass().File().ThisClass()
+		size := args[1].(int32)
+		array, _ := vm.NewArray(thread.VM(), "["+compType, int(size))
+
+		thread.CurrentFrame().PushOperand(array)
+		return nil
+	})
 }
