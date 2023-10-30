@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/murakmii/gojiai"
+	_ "github.com/murakmii/gojiai/native"
 	"github.com/murakmii/gojiai/vm"
-	_ "github.com/murakmii/gojiai/vm/native"
 	"os"
 	"strings"
 	"time"
@@ -111,7 +111,6 @@ func execVM(config *gojiai.Config) {
 				fmt.Printf("[VM] unhandled exception in thread '%s': %s\n", result.Thread.Name(), javaErr)
 				exClass, printMethod := javaErr.Exception().Class().ResolveMethod("printStackTrace", "()V")
 				result.Thread.Execute(vm.NewFrame(exClass, printMethod).SetLocals([]interface{}{javaErr.Exception()}))
-				//os.Stderr.WriteString("\n")
 			} else {
 				fmt.Printf("[VM] occurred error in thread '%s': %s\n", result.Thread.Name(), result.Err)
 			}
