@@ -1,19 +1,19 @@
-package util
+package support
 
 import (
 	"encoding/binary"
 	"io"
 )
 
-type BinReader struct {
+type ByteSeq struct {
 	src    []byte
 	bytes  []byte
 	offset int
 }
 
-func NewBinReader(src io.Reader) (*BinReader, error) {
+func NewByteSeq(src io.Reader) (*ByteSeq, error) {
 	var err error
-	r := &BinReader{}
+	r := &ByteSeq{}
 
 	r.bytes, err = io.ReadAll(src)
 	if err != nil {
@@ -24,12 +24,12 @@ func NewBinReader(src io.Reader) (*BinReader, error) {
 	return r, nil
 }
 
-func (r *BinReader) Skip(n int) {
+func (r *ByteSeq) Skip(n int) {
 	r.bytes = r.bytes[n:]
 	r.offset += n
 }
 
-func (r *BinReader) SkipToAlign(align int) {
+func (r *ByteSeq) SkipToAlign(align int) {
 	mod := r.offset % align
 	skip := 0
 	if mod > 0 {
@@ -38,50 +38,50 @@ func (r *BinReader) SkipToAlign(align int) {
 	r.Skip(skip)
 }
 
-func (r *BinReader) Seek(pos int) {
+func (r *ByteSeq) Seek(pos int) {
 	r.bytes = r.src[pos:]
 	r.offset = pos
 }
 
-func (r *BinReader) Pos() int {
+func (r *ByteSeq) Pos() int {
 	return r.offset
 }
 
-func (r *BinReader) ReadByte() uint8 {
+func (r *ByteSeq) ReadByte() uint8 {
 	b := r.bytes[0]
 	r.bytes = r.bytes[1:]
 	r.offset += 1
 	return b
 }
 
-func (r *BinReader) ReadBytes(n int) []byte {
+func (r *ByteSeq) ReadBytes(n int) []byte {
 	bytes := r.bytes[0:n]
 	r.bytes = r.bytes[n:]
 	r.offset += n
 	return bytes
 }
 
-func (r *BinReader) ReadUint16() uint16 {
+func (r *ByteSeq) ReadUint16() uint16 {
 	i := binary.BigEndian.Uint16(r.bytes)
 	r.bytes = r.bytes[2:]
 	r.offset += 2
 	return i
 }
 
-func (r *BinReader) ReadUint32() uint32 {
+func (r *ByteSeq) ReadUint32() uint32 {
 	i := binary.BigEndian.Uint32(r.bytes)
 	r.bytes = r.bytes[4:]
 	r.offset += 4
 	return i
 }
 
-func (r *BinReader) ReadUint64() uint64 {
+func (r *ByteSeq) ReadUint64() uint64 {
 	i := binary.BigEndian.Uint64(r.bytes)
 	r.bytes = r.bytes[8:]
 	r.offset += 8
 	return i
 }
 
-func (r *BinReader) Remain() int {
+func (r *ByteSeq) Remain() int {
 	return len(r.bytes)
 }

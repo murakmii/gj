@@ -3,7 +3,7 @@ package vm
 import (
 	"bytes"
 	"github.com/murakmii/gojiai/class_file"
-	"github.com/murakmii/gojiai/util"
+	"github.com/murakmii/gojiai/support"
 )
 
 type (
@@ -12,7 +12,7 @@ type (
 		curClass  *Class
 		curMethod *class_file.MethodInfo
 		opStack   []interface{}
-		code      *util.BinReader
+		code      *support.ByteSeq
 		pc        uint16
 		syncObj   *Instance
 	}
@@ -27,7 +27,7 @@ type (
 
 func NewFrame(curClass *Class, curMethod *class_file.MethodInfo) *Frame {
 	code := curMethod.Code()
-	codeReader, _ := util.NewBinReader(bytes.NewReader(code.Code()))
+	codeReader, _ := support.NewByteSeq(bytes.NewReader(code.Code()))
 
 	return &Frame{
 		locals:    make([]interface{}, code.MaxLocals()),

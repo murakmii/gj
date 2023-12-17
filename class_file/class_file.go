@@ -3,7 +3,7 @@ package class_file
 import (
 	"bytes"
 	"fmt"
-	"github.com/murakmii/gojiai/util"
+	"github.com/murakmii/gojiai/support"
 	"io"
 	"os"
 	"sort"
@@ -90,7 +90,7 @@ func CreatePrimitiveClassFile(name string) *ClassFile {
 }
 
 func readClassFile(cfReader io.Reader) (*ClassFile, error) {
-	r, err := util.NewBinReader(cfReader)
+	r, err := support.NewByteSeq(cfReader)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func readClassFile(cfReader io.Reader) (*ClassFile, error) {
 	return class, nil
 }
 
-func readInterfaces(r *util.BinReader) []uint16 {
+func readInterfaces(r *support.ByteSeq) []uint16 {
 	ifCount := r.ReadUint16()
 	interfaces := make([]uint16, ifCount)
 
@@ -156,7 +156,7 @@ func readInterfaces(r *util.BinReader) []uint16 {
 	return interfaces
 }
 
-func readReference[T FieldInfo | reference](r *util.BinReader, cp *ConstantPool) []*T {
+func readReference[T FieldInfo | reference](r *support.ByteSeq, cp *ConstantPool) []*T {
 	count := r.ReadUint16()
 	refs := make([]*T, count)
 
@@ -501,7 +501,7 @@ func (c *ClassFile) String() string {
 }
 
 func dumpCode(sb *strings.Builder, code *CodeAttr) {
-	r, _ := util.NewBinReader(bytes.NewReader(code.code))
+	r, _ := support.NewByteSeq(bytes.NewReader(code.code))
 	for r.Remain() > 0 {
 		sb.WriteString("   ")
 

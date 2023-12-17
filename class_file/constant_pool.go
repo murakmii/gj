@@ -2,7 +2,7 @@ package class_file
 
 import (
 	"fmt"
-	"github.com/murakmii/gojiai/util"
+	"github.com/murakmii/gojiai/support"
 	"math"
 	"strings"
 )
@@ -53,7 +53,7 @@ const (
 	invokeDynTag    uint8 = 18
 )
 
-func readCP(r *util.BinReader) *ConstantPool {
+func readCP(r *support.ByteSeq) *ConstantPool {
 	cpCount := r.ReadUint16()
 	cp := &ConstantPool{cpInfo: make([]interface{}, cpCount)}
 

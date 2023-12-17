@@ -9,10 +9,12 @@ import (
 	"text/template"
 )
 
-type Config struct {
-	ClassPath []string          `json:"class_path"`
-	SysProps  map[string]string `json:"system_properties"`
-}
+type (
+	Config struct {
+		ClassPath []string          `json:"class_path"`
+		SysProps  map[string]string `json:"system_properties"`
+	}
+)
 
 // Read configuration JSON from 'r'
 // Content will be evaluated as template before decoding as JSON and

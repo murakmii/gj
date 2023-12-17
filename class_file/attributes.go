@@ -1,6 +1,6 @@
 package class_file
 
-import "github.com/murakmii/gojiai/util"
+import "github.com/murakmii/gojiai/support"
 
 type (
 	CodeAttr struct {
@@ -77,7 +77,7 @@ const (
 	syntheticAttr                            = "Synthetic"
 )
 
-func readAttributes(r *util.BinReader, cp *ConstantPool) []interface{} {
+func readAttributes(r *support.ByteSeq, cp *ConstantPool) []interface{} {
 	attrs := make([]interface{}, r.ReadUint16())
 	for i := 0; i < len(attrs); i++ {
 		attrs[i] = readAttribute(r, cp)
@@ -85,7 +85,7 @@ func readAttributes(r *util.BinReader, cp *ConstantPool) []interface{} {
 	return attrs
 }
 
-func readAttribute(r *util.BinReader, cp *ConstantPool) interface{} {
+func readAttribute(r *support.ByteSeq, cp *ConstantPool) interface{} {
 	name := cp.Utf8(r.ReadUint16())
 	if name == nil {
 		return nil
@@ -169,7 +169,7 @@ func readAttribute(r *util.BinReader, cp *ConstantPool) interface{} {
 	}
 }
 
-func readCodeAttr(r *util.BinReader, cp *ConstantPool) interface{} {
+func readCodeAttr(r *support.ByteSeq, cp *ConstantPool) interface{} {
 	attr := &CodeAttr{
 		maxStack:        r.ReadUint16(),
 		maxLocals:       r.ReadUint16(),

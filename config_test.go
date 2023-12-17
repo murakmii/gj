@@ -2,21 +2,10 @@ package gojiai
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"os"
-	"sync"
 	"testing"
 )
-
-func TestX(t *testing.T) {
-	m := &sync.Mutex{}
-	m.Lock()
-	defer m.Unlock()
-
-	m.Lock()
-	fmt.Println("yes double lock")
-}
 
 func TestReadConfig(t *testing.T) {
 	tests := []struct {
